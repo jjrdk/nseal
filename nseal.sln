@@ -1,0 +1,37 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30011.22
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "nseal", "src\nseal\nseal.csproj", "{7F16AB54-AEEF-4141-B083-83F0FFE7778A}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "nseal.tests", "tests\nseal.tests\nseal.tests.csproj", "{0326FFDD-C130-405D-99A0-934142B056F2}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{CC6044A9-A261-4F59-9CC0-A4253EEB8C21}"
+	ProjectSection(SolutionItems) = preProject
+		build.ps1 = build.ps1
+		README.md = README.md
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{7F16AB54-AEEF-4141-B083-83F0FFE7778A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7F16AB54-AEEF-4141-B083-83F0FFE7778A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7F16AB54-AEEF-4141-B083-83F0FFE7778A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7F16AB54-AEEF-4141-B083-83F0FFE7778A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0326FFDD-C130-405D-99A0-934142B056F2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0326FFDD-C130-405D-99A0-934142B056F2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0326FFDD-C130-405D-99A0-934142B056F2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0326FFDD-C130-405D-99A0-934142B056F2}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {B9BC813A-68A9-4C31-BC4D-FF7496EC4A7B}
+	EndGlobalSection
+EndGlobal
