@@ -46,7 +46,6 @@ namespace NSeal.Tests
         [Fact]
         public async Task CanReadBackMetadata()
         {
-            PackageContainer metadata = null;
             var output = await CreatePackage().ConfigureAwait(false);
             var outputArchive = ZipArchive.Open(output);
 
@@ -55,7 +54,7 @@ namespace NSeal.Tests
             using var streamReader = new StreamReader(entryStream);
             var json = await streamReader.ReadToEndAsync().ConfigureAwait(false);
 
-            metadata = JsonConvert.DeserializeObject<PackageContainer>(json);
+            var metadata = JsonConvert.DeserializeObject<PackageContainer>(json);
             Assert.Single(metadata.Bundle);
         }
 

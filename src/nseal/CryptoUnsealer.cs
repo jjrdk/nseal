@@ -33,7 +33,10 @@
             using var reader = new StreamReader(metadataStream);
             var jsonReader = new JsonTextReader(reader);
             var metadata = _serializer.Deserialize<PackageContainer>(jsonReader);
-
+            if (metadata == null)
+            {
+                throw new InvalidDataException("Could not read metadata");
+            }
             foreach (var bundle in metadata.Bundle)
             {
                 var cryptography = bundle.Cryptography;
@@ -41,7 +44,7 @@
 
                 var entry = archive.Entries.First(x => x.Key == bundle.ContentLink);
 
-                var hmac = HMAC.Create("HMACSHA256");
+                var hmac = HMAC.Create("HMACSHA256")!;
                 hmac.Key = DecryptBytesWithPrivateKey(Convert.FromBase64String(cryptography.AuthKey));
 
                 await using var hashStream = entry.OpenEntryStream();
@@ -69,26 +72,15 @@
 
         private SymmetricAlgorithm CreateCryptoProvider(Cryptography cryptography)
         {
-            SymmetricAlgorithm algo = null;
-            switch (cryptography.Algorithm)
+            SymmetricAlgorithm algo = cryptography.Algorithm switch
             {
-                case "aes":
-                    algo = Aes.Create();
-                    break;
-                case "rijndael":
-                    algo = Rijndael.Create();
-                    break;
-                case "des":
-                    algo = DES.Create();
-                    break;
-                case "tripledes":
-                    algo = TripleDES.Create();
-                    break;
-                case "rc2":
-                    algo = RC2.Create();
-                    break;
-                default: throw new ArgumentException("Unknown algorithm", cryptography.Algorithm);
-            }
+                "aes" => Aes.Create()!,
+                "rijndael" => Rijndael.Create()!,
+                "des" => DES.Create()!,
+                "tripledes" => TripleDES.Create()!,
+                "rc2" => RC2.Create()!,
+                _ => throw new ArgumentException("Unknown algorithm", cryptography.Algorithm)
+            };
 
             algo.BlockSize = cryptography.BlockSize;
             algo.KeySize = cryptography.KeySize;
@@ -100,7 +92,7 @@
             return algo;
         }
 
-        private byte[] DecryptBytesWithPrivateKey(byte[] data, RSAEncryptionPadding padding = null)
+        private byte[] DecryptBytesWithPrivateKey(byte[] data, RSAEncryptionPadding? padding = null)
         {
             var result = _privateKey.Decrypt(data, padding ?? RSAEncryptionPadding.Pkcs1);
             return result;
@@ -108,7 +100,8 @@
 
         public void Dispose()
         {
-            _privateKey?.Dispose();
+            _privateKey.Dispose();
+            GC.SuppressFinalize(this);
         }
     }
 }

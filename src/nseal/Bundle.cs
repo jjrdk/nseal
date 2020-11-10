@@ -10,7 +10,7 @@
         public DateTimeOffset AssemblyTime { get; set; } = DateTimeOffset.Now;
 
         [DataMember(Name = "contentLink")]
-        public string ContentLink { get; set; }
+        public string ContentLink { get; set; } = string.Empty;
 
         [DataMember(Name = "cryptography")]
         public Cryptography Cryptography { get; set; } = new Cryptography();

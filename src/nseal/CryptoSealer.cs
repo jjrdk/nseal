@@ -6,6 +6,7 @@
     using System.IO;
     using System.Security.Cryptography;
     using System.Text;
+    using System.Threading;
     using System.Threading.Tasks;
     using Newtonsoft.Json;
     using SharpCompress.Archives.Zip;
@@ -17,7 +18,7 @@
         private readonly RSA _receiverPublicKey;
         private readonly Func<SymmetricAlgorithm> _algo;
 
-        public CryptoSealer(RSA receiverPublicKey, Func<SymmetricAlgorithm> algo = null)
+        public CryptoSealer(RSA receiverPublicKey, Func<SymmetricAlgorithm>? algo = null)
         {
             _receiverPublicKey = receiverPublicKey;
             _algo = algo ?? CreateAes;
@@ -81,16 +82,17 @@
             EncryptionContent encryptionContent,
             ICryptoTransform encryptor,
             ZipArchive outerZip,
-            SymmetricAlgorithm aes)
+            SymmetricAlgorithm aes,
+            CancellationToken cancellationToken = default)
         {
             var encryptionContentKey = encryptionContent.Key + ".enc";
 
             var encryptedStream = new MemoryStream();
-            await WriteEncrypted(encryptionContent.Content, encryptor, encryptedStream).ConfigureAwait(false);
+            await WriteEncrypted(encryptionContent.Content, encryptor, encryptedStream, cancellationToken).ConfigureAwait(false);
 
             encryptedStream.Position = 0;
 
-            using var hmac = HMAC.Create("HMACSHA256");
+            using var hmac = HMAC.Create("HMACSHA256")!;
             var hash = hmac.ComputeHash(encryptedStream);
             encryptedStream.Position = 0;
 
@@ -120,7 +122,7 @@
             };
         }
 
-        private string GetAlgorithm(Type type)
+        private static string GetAlgorithm(Type type)
         {
             if (typeof(Aes).IsAssignableFrom(type))
             {
@@ -153,19 +155,20 @@
         private static async Task WriteEncrypted(
             Stream content,
             ICryptoTransform encryptor,
-            Stream encryptedStream)
+            Stream encryptedStream,
+            CancellationToken cancellationToken = default)
         {
             const int length = 4096;
             var arrayPool = ArrayPool<byte>.Shared;
             var buffer = arrayPool.Rent(length);
             await using var cs = new CryptoStream(encryptedStream, encryptor, CryptoStreamMode.Write, true);
             int read;
-            while ((read = await content.ReadAsync(buffer, 0, length).ConfigureAwait(false)) > 0)
+            while ((read = await content.ReadAsync(buffer, 0, length, cancellationToken).ConfigureAwait(false)) > 0)
             {
-                await cs.WriteAsync(buffer, 0, read).ConfigureAwait(false);
+                await cs.WriteAsync(buffer, 0, read, cancellationToken).ConfigureAwait(false);
             }
 
-            await cs.FlushAsync().ConfigureAwait(false);
+            await cs.FlushAsync(cancellationToken).ConfigureAwait(false);
             cs.FlushFinalBlock();
             cs.Close();
 
@@ -174,7 +177,8 @@
 
         public void Dispose()
         {
-            _receiverPublicKey?.Dispose();
+            _receiverPublicKey.Dispose();
+            GC.SuppressFinalize(this);
         }
     }
 }

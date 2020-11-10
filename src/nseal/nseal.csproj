@@ -1,22 +1,32 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFrameworks>netstandard2.1</TargetFrameworks>
-    <langVersion>latest</langVersion>
-    <RootNamespace>NSeal</RootNamespace>
-    <Version>1.0.0</Version>
-    <Authors>Jacob Reimers</Authors>
-    <Company>Reimers.dk</Company>
-    <Product>NSeal</Product>
-    <Copyright>Reimers.dk © 2020</Copyright>
-    <RepositoryType>git</RepositoryType>
-    <GeneratePackageOnBuild>False</GeneratePackageOnBuild>
-    <LangVersion>latest</LangVersion>
-  </PropertyGroup>
+	<PropertyGroup>
+		<TargetFrameworks>netstandard2.1;net5.0</TargetFrameworks>
+		<langVersion>latest</langVersion>
+		<RootNamespace>NSeal</RootNamespace>
+		<AssemblyName>nseal</AssemblyName>
+		<PackageId>nseal</PackageId>
+		<Description>Content encryption library</Description>
+		<PackageDescription>$(Description)</PackageDescription>
+		<Title>NSeal</Title>
+		<Version>1.2.0</Version>
+		<Authors>Jacob Reimers</Authors>
+		<Company>Reimers.dk</Company>
+		<Product>NSeal</Product>
+		<Copyright>Reimers.dk © 2020</Copyright>
+		<PackageTags>Encryption PEM Crypto PFX</PackageTags>
+		<PackageProjectUrl>https://github.com/jjrdk/nseal</PackageProjectUrl>
+		<RepositoryUrl>https://github.com/jjrdk/nseal</RepositoryUrl>
+		<RepositoryType>git</RepositoryType>
+		<GeneratePackageOnBuild>False</GeneratePackageOnBuild>
+		<LangVersion>latest</LangVersion>
+		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+		<Nullable>enable</Nullable>
+	</PropertyGroup>
 
 
-  <ItemGroup>
-    <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
-    <PackageReference Include="sharpcompress" Version="0.24.0" />
-  </ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
+		<PackageReference Include="sharpcompress" Version="0.26.0" />
+	</ItemGroup>
 </Project>
