@@ -10,7 +10,7 @@
         [DataMember(Name = "created")]
         public DateTimeOffset Created { get; set; }
 
-        [DataMember(Name = "bundle")]
-        public ICollection<Bundle> Bundle { get; set; } = new List<Bundle>();
+        [DataMember(Name = "bundles")]
+        public ICollection<Bundle> Bundles { get; set; } = new List<Bundle>();
     }
 }

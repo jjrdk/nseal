@@ -12,18 +12,32 @@
     using SharpCompress.Archives.Zip;
     using SharpCompress.Compressors.Deflate;
 
+    /// <summary>
+    /// Defines the crypto sealer type.
+    /// </summary>
     public class CryptoSealer : IDisposable
     {
         private readonly JsonSerializer _serializer = JsonSerializer.Create(CryptoSettings.SerializerSettings);
         private readonly RSA _receiverPublicKey;
         private readonly Func<SymmetricAlgorithm> _algo;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="CryptoSealer"/> class.
+        /// </summary>
+        /// <param name="receiverPublicKey">The <see cref="RSA">public key</see> of the intended recipient</param>
+        /// <param name="algo">The <see cref="SymmetricAlgorithm"/> to apply for encryption.</param>
         public CryptoSealer(RSA receiverPublicKey, Func<SymmetricAlgorithm>? algo = null)
         {
             _receiverPublicKey = receiverPublicKey;
             _algo = algo ?? CreateAes;
         }
 
+        /// <summary>
+        /// Encrypts the passed content into the passed stream.
+        /// </summary>
+        /// <param name="content">The content to encrypt.</param>
+        /// <param name="output">The <see cref="Stream"/> to write output to.</param>
+        /// <returns>A <see cref="Task"/> for the async operation.</returns>
         public async Task Encrypt(IEnumerable<EncryptionContent> content, Stream output)
         {
             var metadata = new PackageContainer { Created = DateTimeOffset.Now };
@@ -43,7 +57,7 @@
 
                 contentStreams.Add(stream);
 
-                metadata.Bundle.Add(bundle);
+                metadata.Bundles.Add(bundle);
             }
             var metadataStream = WriteMetadata(metadata, outerZip);
             contentStreams.Add(metadataStream);
@@ -118,7 +132,7 @@
                     EncryptionKey = Convert.ToBase64String(_receiverPublicKey.Encrypt(algorithm.Key, RSAEncryptionPadding.Pkcs1)),
                     AuthCode = Convert.ToBase64String(authCode),
                     AuthKey = Convert.ToBase64String(_receiverPublicKey.Encrypt(hmacKey, RSAEncryptionPadding.Pkcs1))
-                },
+                }
             };
         }
 

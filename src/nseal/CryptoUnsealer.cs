@@ -42,7 +42,7 @@
                 throw new InvalidDataException("Could not read metadata");
             }
 
-            foreach (var bundle in metadata.Bundle)
+            foreach (var bundle in metadata.Bundles)
             {
                 var cryptography = bundle.Cryptography;
                 var cryptoProvider = CreateCryptoProvider(cryptography);

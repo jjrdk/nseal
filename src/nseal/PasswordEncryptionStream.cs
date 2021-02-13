@@ -2,7 +2,6 @@
 {
     using System.IO;
     using System.Security.Cryptography;
-    using System.Threading.Tasks;
 
     internal class PasswordEncryptionStream : Stream
     {

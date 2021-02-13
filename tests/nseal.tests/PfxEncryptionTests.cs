@@ -55,7 +55,7 @@ namespace NSeal.Tests
             var json = await streamReader.ReadToEndAsync().ConfigureAwait(false);
 
             var metadata = JsonConvert.DeserializeObject<PackageContainer>(json);
-            Assert.Single(metadata.Bundle);
+            Assert.Single(metadata.Bundles);
         }
 
         private async Task<Stream> CreatePackage()

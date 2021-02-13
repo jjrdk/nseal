@@ -1,7 +1,6 @@
 ﻿namespace NSeal
 {
     using System.IO;
-    using System.Security;
     using System.Security.Cryptography;
     using System.Threading.Tasks;
 
