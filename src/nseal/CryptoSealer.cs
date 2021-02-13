@@ -163,15 +163,18 @@
             var buffer = arrayPool.Rent(length);
             await using var cs = new CryptoStream(encryptedStream, encryptor, CryptoStreamMode.Write, true);
             int read;
-            while ((read = await content.ReadAsync(buffer, 0, length, cancellationToken).ConfigureAwait(false)) > 0)
+            while ((read = await content.ReadAsync(buffer.AsMemory(0, length), cancellationToken).ConfigureAwait(false)) > 0)
             {
-                await cs.WriteAsync(buffer, 0, read, cancellationToken).ConfigureAwait(false);
+                await cs.WriteAsync(buffer.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
             }
 
             await cs.FlushAsync(cancellationToken).ConfigureAwait(false);
+#if NETSTANDARD2_1
             cs.FlushFinalBlock();
+#else
+            await cs.FlushFinalBlockAsync(cancellationToken).ConfigureAwait(false);
+#endif
             cs.Close();
-
             arrayPool.Return(buffer);
         }
 

@@ -4,6 +4,7 @@
     using System.IO;
     using System.Linq;
     using System.Security.Cryptography;
+    using System.Threading;
     using System.Threading.Tasks;
     using Newtonsoft.Json;
     using SharpCompress.Archives.Zip;
@@ -25,7 +26,10 @@
                 key => (true, File.Create(Path.Combine(outputFolder, Path.GetFileNameWithoutExtension(key) ?? key), 4096, FileOptions.Asynchronous)));
         }
 
-        public async Task Decrypt(Stream package, Func<string, (bool dispose, Stream content)> outputStreamFinder)
+        public async Task Decrypt(
+            Stream package,
+            Func<string, (bool dispose, Stream content)> outputStreamFinder,
+            CancellationToken cancellationToken = default)
         {
             var archive = ZipArchive.Open(package);
             var metadataEntry = archive.Entries.First(x => x.Key == "metadata.json");
@@ -37,6 +41,7 @@
             {
                 throw new InvalidDataException("Could not read metadata");
             }
+
             foreach (var bundle in metadata.Bundle)
             {
                 var cryptography = bundle.Cryptography;
@@ -60,7 +65,7 @@
                 var (dispose, outputStream) = outputStreamFinder(entry.Key);
                 await using var contentStream = entry.OpenEntryStream();
                 await using var cryptoStream = new CryptoStream(contentStream, decryptor, CryptoStreamMode.Read);
-                await cryptoStream.CopyToAsync(outputStream).ConfigureAwait(false);
+                await cryptoStream.CopyToAsync(outputStream, cancellationToken).ConfigureAwait(false);
 
                 if (dispose)
                 {

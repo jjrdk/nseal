@@ -30,7 +30,7 @@ namespace NSeal.Tests
         [Fact]
         public async Task CanDecryptContent()
         {
-            var output = await CreatePackage().ConfigureAwait(false);
+            await using var output = await CreatePackage().ConfigureAwait(false);
 
             await _cryptoUnsealer.Decrypt(output, Path.GetFullPath("./")).ConfigureAwait(false);
             _cryptoUnsealer.Dispose();
@@ -46,7 +46,7 @@ namespace NSeal.Tests
         [Fact]
         public async Task CanReadBackMetadata()
         {
-            var output = await CreatePackage().ConfigureAwait(false);
+            await using var output = await CreatePackage().ConfigureAwait(false);
             var outputArchive = ZipArchive.Open(output);
 
             var entry = outputArchive.Entries.First(x => x.Key == "metadata.json");
