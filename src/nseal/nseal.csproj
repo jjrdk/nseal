@@ -9,7 +9,7 @@
 		<Description>Content encryption library</Description>
 		<PackageDescription>$(Description)</PackageDescription>
 		<Title>NSeal</Title>
-		<Version>1.3.0</Version>
+		<Version>1.4.0</Version>
 		<Authors>Jacob Reimers</Authors>
 		<Company>Reimers.dk</Company>
 		<Product>NSeal</Product>
