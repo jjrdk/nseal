@@ -34,25 +34,24 @@
         /// <returns>An instance of a <see cref="KeyEnvelope"/>.</returns>
         public static async Task<KeyEnvelope> Create(string password, byte[]? salt = null)
         {
-            using var rng = new RNGCryptoServiceProvider();
             if (salt == null)
             {
                 salt = new byte[SaltLength];
-                rng.GetBytes(salt);
+                RandomNumberGenerator.Fill(salt);
             }
 
             var dek = new byte[KeyLength];
-            rng.GetBytes(dek);
+            RandomNumberGenerator.Fill(dek);
             using var derivedBytes = new Rfc2898DeriveBytes(password, salt);
             // Encrypt the data.
-            using Aes encAlg = Aes.Create();
+            using var encAlg = Aes.Create();
             encAlg.GenerateIV();
             encAlg.Key = derivedBytes.GetBytes(KeyLength);
 
             await using MemoryStream encryptionStream = new();
             await using CryptoStream encrypt = new(encryptionStream, encAlg.CreateEncryptor(), CryptoStreamMode.Write);
 
-            await encrypt.WriteAsync(dek, 0, dek.Length).ConfigureAwait(false);
+            await encrypt.WriteAsync(dek).ConfigureAwait(false);
             encrypt.FlushFinalBlock();
             encrypt.Close();
             await encryptionStream.FlushAsync().ConfigureAwait(false);
@@ -70,9 +69,8 @@
         public async Task ChangePassword(string oldPassword, string newPassword, byte[]? newSalt = null)
         {
             var key = await GetDek(oldPassword).ConfigureAwait(false);
-            using var rng = new RNGCryptoServiceProvider();
             newSalt ??= _salt;
-            rng.GetBytes(newSalt);
+            RandomNumberGenerator.Fill(newSalt);
             _salt = newSalt;
             using var derivedBytes = new Rfc2898DeriveBytes(newPassword, _salt);
             using var algo = Aes.Create();
@@ -83,7 +81,7 @@
             await using MemoryStream encryptionStream = new();
             await using CryptoStream encrypt = new(encryptionStream, algo.CreateEncryptor(), CryptoStreamMode.Write);
 
-            await encrypt.WriteAsync(key, 0, key.Length).ConfigureAwait(false);
+            await encrypt.WriteAsync(key).ConfigureAwait(false);
             encrypt.FlushFinalBlock();
             encrypt.Close();
             await encryptionStream.FlushAsync().ConfigureAwait(false);
@@ -110,7 +108,7 @@
                 decryptionStreamBacking,
                 decAlg.CreateDecryptor(),
                 CryptoStreamMode.Read);
-            await decrypt.ReadAsync(key, 0, key.Length).ConfigureAwait(false);
+            await decrypt.ReadAsync(key).ConfigureAwait(false);
             await decrypt.FlushAsync().ConfigureAwait(false);
             decrypt.Close();
             decryptionStreamBacking.Close();

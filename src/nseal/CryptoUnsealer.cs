@@ -80,11 +80,10 @@
             SymmetricAlgorithm algo = cryptography.Algorithm switch
             {
                 "aes" => Aes.Create()!,
-                "rijndael" => Rijndael.Create()!,
                 "des" => DES.Create()!,
                 "tripledes" => TripleDES.Create()!,
                 "rc2" => RC2.Create()!,
-                _ => throw new ArgumentException("Unknown algorithm", cryptography.Algorithm)
+                _ => throw new ArgumentException("Unknown or unsupported algorithm", cryptography.Algorithm)
             };
 
             algo.BlockSize = cryptography.BlockSize;

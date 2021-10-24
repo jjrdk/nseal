@@ -53,11 +53,11 @@ namespace NSeal.Tests
 
         public static IEnumerable<object[]> GetAlgoParams()
         {
-            return from symmetric in new SymmetricAlgorithm[] { Aes.Create(), Rijndael.Create(), DES.Create(), TripleDES.Create(), RC2.Create() }
+            return from symmetric in new SymmetricAlgorithm[] { Aes.Create(), DES.Create(), TripleDES.Create(), RC2.Create() }
                    from blockSize in symmetric.LegalBlockSizes.SelectMany(GenerateKeySizes)
                    from keySize in symmetric.LegalKeySizes.SelectMany(GenerateKeySizes)
                    from mode in new[] { CipherMode.CBC, CipherMode.ECB }
-                   from padding in Enum.GetValues(typeof(PaddingMode)).Cast<PaddingMode>().Where(p => p != PaddingMode.None)
+                   from padding in Enum.GetValues<PaddingMode>().Where(p => p != PaddingMode.None)
                    select new object[] { symmetric, blockSize, keySize, mode, padding };
         }
 

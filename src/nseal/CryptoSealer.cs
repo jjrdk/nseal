@@ -83,13 +83,12 @@
 
         private static SymmetricAlgorithm CreateAes()
         {
-            return new AesCryptoServiceProvider
-            {
-                BlockSize = 128,
-                KeySize = 256,
-                Mode = CipherMode.CBC,
-                Padding = PaddingMode.PKCS7
-            };
+            var algo = Aes.Create();
+            algo.BlockSize = 128;
+            algo.KeySize = 256;
+            algo.Mode = CipherMode.CBC;
+            algo.Padding = PaddingMode.PKCS7;
+            return algo;
         }
 
         private async Task<(Bundle bundle, Stream stream)> CreateBundle(
@@ -143,11 +142,6 @@
                 return "aes";
             }
 
-            if (typeof(Rijndael).IsAssignableFrom(type))
-            {
-                return "rijndael";
-            }
-
             if (typeof(DES).IsAssignableFrom(type))
             {
                 return "des";
@@ -163,7 +157,7 @@
                 return "rc2";
             }
 
-            throw new ArgumentException("Unknown algorithm type", nameof(type));
+            throw new ArgumentException("Unknown or unsupported algorithm type", nameof(type));
         }
 
         private static async Task WriteEncrypted(
