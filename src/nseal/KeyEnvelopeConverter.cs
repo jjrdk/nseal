@@ -6,12 +6,12 @@
     /// <summary>
     /// Defines the <see cref="KeyEnvelope"/> converter.
     /// </summary>
-    public class KeyEnvelopeConverter : JsonConverter<KeyEnvelope>
+    public sealed class KeyEnvelopeConverter : JsonConverter<KeyEnvelope>
     {
         private readonly byte[] _systemSalt;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="KeyEnvelopeConverter"/> class.
+        /// Initializes a new instance of the <see cref="KeyEnvelopeConverter"/> sealed class.
         /// </summary>
         /// <param name="systemSalt"></param>
         public KeyEnvelopeConverter(byte[] systemSalt)

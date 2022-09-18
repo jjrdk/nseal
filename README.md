@@ -32,7 +32,7 @@ The provided stream will flush the final block when the stream is closed or disp
 
 Transporting content over insecure transports exposes the content to eavesdropping or manipulation. To prevent this, the data should at least be encrypted (content security), but should also signed to show it has not been altered (integrity check).
 
-Nseal provides the ```CryptoSealer``` class to generate a zip file for encrypted content. When building the encrypted content, the ```CryptoSealer``` uses the public key of the intended recipient to generate (DEK) and protect (KEK) symmetric keys used for content encryption. There is a corresponding ```CryptoUnsealer``` for performing the unpacking of the encrypted content. To decrypt the content, the recipient's private key is required.
+Nseal provides the ```CryptoSealer``` sealed class to generate a zip file for encrypted content. When building the encrypted content, the ```CryptoSealer``` uses the public key of the intended recipient to generate (DEK) and protect (KEK) symmetric keys used for content encryption. There is a corresponding ```CryptoUnsealer``` for performing the unpacking of the encrypted content. To decrypt the content, the recipient's private key is required.
 
 The ```CryptoSealer``` and ```CryptoUnsealer``` use asymmetric keys to protect the generated encryption keys to make it easier to perform key exchanges across systems.
 

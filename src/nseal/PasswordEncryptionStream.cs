@@ -3,7 +3,7 @@
     using System.IO;
     using System.Security.Cryptography;
 
-    internal class PasswordEncryptionStream : Stream
+    internal sealed class PasswordEncryptionStream : Stream
     {
         private readonly CryptoStream _cryptoStream;
 
@@ -62,7 +62,7 @@
         }
     }
 
-    internal class PasswordDecryptionStream : Stream
+    internal sealed class PasswordDecryptionStream : Stream
     {
         private readonly CryptoStream _cryptoStream;
 

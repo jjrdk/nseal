@@ -8,7 +8,7 @@ namespace NSeal.Tests
     using Newtonsoft.Json;
     using Xunit;
 
-    public class KeyEnvelopeTests
+    public sealed class KeyEnvelopeTests
     {
         private const string OldPassword = "old password";
         private const string Password = "password";
@@ -68,7 +68,7 @@ namespace NSeal.Tests
 
             var recreated = JsonConvert.DeserializeObject<KeyEnvelope>(json, converter);
 
-            Assert.Equal(envelope.EncryptedDek, recreated.EncryptedDek);
+            Assert.Equal(envelope.EncryptedDek, recreated!.EncryptedDek);
             Assert.Equal(envelope.InitializationVector, recreated.InitializationVector);
         }
 
@@ -76,14 +76,16 @@ namespace NSeal.Tests
         public async Task CanRoundtripEncryption()
         {
             var envelope = await KeyEnvelope.Create(Password).ConfigureAwait(false);
-            var helloWorld = "Hello, World";
+            const string helloWorld = "Hello, World";
             var content = Encoding.UTF8.GetBytes(helloWorld);
             await using var contentStream = new MemoryStream();
-            var encryption = await envelope.CreateEncryptionStream(Password, contentStream).ConfigureAwait(false);
-            await encryption.WriteAsync(content).ConfigureAwait(false);
-            await encryption.FlushAsync().ConfigureAwait(false);
-            encryption.Close();
-
+            await using (var encryption =
+                     await envelope.CreateEncryptionStream(Password, contentStream).ConfigureAwait(false))
+            {
+                await encryption.WriteAsync(content).ConfigureAwait(false);
+                await encryption.FlushAsync().ConfigureAwait(false);
+            }
+            
             contentStream.Position = 0;
 
             var decryption = await envelope.CreateDecryptionStream(Password, contentStream).ConfigureAwait(false);

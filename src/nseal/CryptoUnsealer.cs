@@ -9,7 +9,7 @@
     using Newtonsoft.Json;
     using SharpCompress.Archives.Zip;
 
-    public class CryptoUnsealer : IDisposable
+    public sealed class CryptoUnsealer : IDisposable
     {
         private readonly RSA _privateKey;
         private readonly JsonSerializer _serializer = JsonSerializer.Create(CryptoSettings.SerializerSettings);

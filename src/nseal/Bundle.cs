@@ -4,7 +4,7 @@
     using System.Runtime.Serialization;
 
     [DataContract]
-    internal class Bundle
+    internal sealed class Bundle
     {
         [DataMember(Name = "assemblyTime")]
         public DateTimeOffset AssemblyTime { get; set; } = DateTimeOffset.Now;

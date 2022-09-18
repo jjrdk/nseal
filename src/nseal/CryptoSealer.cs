@@ -15,14 +15,14 @@
     /// <summary>
     /// Defines the crypto sealer type.
     /// </summary>
-    public class CryptoSealer : IDisposable
+    public sealed class CryptoSealer : IDisposable
     {
         private readonly JsonSerializer _serializer = JsonSerializer.Create(CryptoSettings.SerializerSettings);
         private readonly RSA _receiverPublicKey;
         private readonly Func<SymmetricAlgorithm> _algo;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="CryptoSealer"/> class.
+        /// Initializes a new instance of the <see cref="CryptoSealer"/> sealed class.
         /// </summary>
         /// <param name="receiverPublicKey">The <see cref="RSA">public key</see> of the intended recipient</param>
         /// <param name="algo">The <see cref="SymmetricAlgorithm"/> to apply for encryption.</param>

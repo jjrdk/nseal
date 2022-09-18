@@ -17,7 +17,8 @@
                 FloatFormatHandling = FloatFormatHandling.DefaultValue,
                 FloatParseHandling = FloatParseHandling.Double,
                 Formatting = Formatting.None,
-                MetadataPropertyHandling = MetadataPropertyHandling.ReadAhead,
+                MetadataPropertyHandling = MetadataPropertyHandling.Default,
+                TypeNameHandling = TypeNameHandling.Auto,
                 MissingMemberHandling = MissingMemberHandling.Ignore,
                 NullValueHandling = NullValueHandling.Ignore
             };

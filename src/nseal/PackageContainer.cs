@@ -5,7 +5,7 @@
     using System.Runtime.Serialization;
 
     [DataContract]
-    internal class PackageContainer
+    internal sealed class PackageContainer
     {
         [DataMember(Name = "created")]
         public DateTimeOffset Created { get; set; }

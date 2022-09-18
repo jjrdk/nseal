@@ -4,7 +4,7 @@
     using System.Security.Cryptography;
 
     [DataContract]
-    internal class Cryptography
+    internal sealed class Cryptography
     {
         [DataMember(Name = "algorithm")]
         public string Algorithm { get; set; } = string.Empty;

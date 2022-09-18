@@ -10,7 +10,7 @@ namespace NSeal.Tests
     using PemUtils;
     using Xunit;
 
-    public class AlgorithmTests
+    public sealed class AlgorithmTests
     {
         private const string HelloWorld = "Hello, World";
 

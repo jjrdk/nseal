@@ -11,7 +11,7 @@ namespace NSeal.Tests
     using SharpCompress.Archives.Zip;
     using Xunit;
 
-    public class PfxEncryptionTests
+    public sealed class PfxEncryptionTests
     {
         private const string HelloWorld = "Hello, World";
         readonly CryptoSealer _cryptoStreamer = null;

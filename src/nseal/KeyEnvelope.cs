@@ -5,16 +5,16 @@
     using System.Threading.Tasks;
 
     /// <summary>
-    /// Defines the key envelope class.
+    /// Defines the key envelope sealed class.
     /// </summary>
-    public class KeyEnvelope
+    public sealed class KeyEnvelope
     {
         private byte[] _salt;
         private const int KeyLength = 32;
         private const int SaltLength = 16;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="KeyEnvelope"/> class.
+        /// Initializes a new instance of the <see cref="KeyEnvelope"/> sealed class.
         /// </summary>
         /// <param name="encryptedDek">The encrypted data encryption key bytes.</param>
         /// <param name="initializationVector">The initialization vector.</param>
@@ -65,6 +65,7 @@
         /// </summary>
         /// <param name="oldPassword">The old password</param>
         /// <param name="newPassword">The new password</param>
+        /// <param name="newSalt">New salt to apply to changed password</param>
         /// <returns>A <see cref="Task"/> for the async operation.</returns>
         public async Task ChangePassword(string oldPassword, string newPassword, byte[]? newSalt = null)
         {
@@ -97,7 +98,7 @@
         {
             using var deriveBytes = new Rfc2898DeriveBytes(password, _salt);
 
-            using Aes decAlg = Aes.Create();
+            using var decAlg = Aes.Create();
             decAlg.Key = deriveBytes.GetBytes(KeyLength);
             decAlg.IV = InitializationVector;
 
@@ -108,7 +109,7 @@
                 decryptionStreamBacking,
                 decAlg.CreateDecryptor(),
                 CryptoStreamMode.Read);
-            await decrypt.ReadAsync(key).ConfigureAwait(false);
+            _ = await decrypt.ReadAsync(key).ConfigureAwait(false);
             await decrypt.FlushAsync().ConfigureAwait(false);
             decrypt.Close();
             decryptionStreamBacking.Close();
