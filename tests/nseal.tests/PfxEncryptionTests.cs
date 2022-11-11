@@ -30,13 +30,15 @@ namespace NSeal.Tests
         [Fact]
         public async Task CanDecryptContent()
         {
-            await using var output = await CreatePackage().ConfigureAwait(false);
+            var output = await CreatePackage().ConfigureAwait(false);
+            await using var _ = output.ConfigureAwait(false);
 
             await _cryptoUnsealer.Decrypt(output, Path.GetFullPath("./")).ConfigureAwait(false);
             _cryptoUnsealer.Dispose();
             await output.DisposeAsync().ConfigureAwait(false);
 
-            await using var content = File.OpenRead("item.txt");
+            var content = File.OpenRead("item.txt");
+            await using var __ = content.ConfigureAwait(false);
             using var reader = new StreamReader(content);
             var text = await reader.ReadToEndAsync().ConfigureAwait(false);
 
@@ -46,11 +48,13 @@ namespace NSeal.Tests
         [Fact]
         public async Task CanReadBackMetadata()
         {
-            await using var output = await CreatePackage().ConfigureAwait(false);
+            var output = await CreatePackage().ConfigureAwait(false);
+            await using var _ = output.ConfigureAwait(false);
             var outputArchive = ZipArchive.Open(output);
 
             var entry = outputArchive.Entries.First(x => x.Key == "metadata.json");
-            await using var entryStream = entry.OpenEntryStream();
+            var entryStream = entry.OpenEntryStream();
+            await using var __ = entryStream.ConfigureAwait(false);
             using var streamReader = new StreamReader(entryStream);
             var json = await streamReader.ReadToEndAsync().ConfigureAwait(false);
 
@@ -60,7 +64,8 @@ namespace NSeal.Tests
 
         private async Task<Stream> CreatePackage()
         {
-            await using (var output = File.Create("output.zip"))
+            var output = File.Create("output.zip");
+            await using (output.ConfigureAwait(false))
             {
                 var content = new EncryptionContent(
                     "item.txt",

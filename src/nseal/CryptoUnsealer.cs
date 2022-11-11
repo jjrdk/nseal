@@ -33,7 +33,8 @@
         {
             var archive = ZipArchive.Open(package);
             var metadataEntry = archive.Entries.First(x => x.Key == "metadata.json");
-            await using var metadataStream = metadataEntry.OpenEntryStream();
+            var metadataStream = metadataEntry.OpenEntryStream();
+            await using var _ = metadataStream.ConfigureAwait(false);
             using var reader = new StreamReader(metadataStream);
             var jsonReader = new JsonTextReader(reader);
             var metadata = _serializer.Deserialize<PackageContainer>(jsonReader);
@@ -49,11 +50,19 @@
 
                 var entry = archive.Entries.First(x => x.Key == bundle.ContentLink);
 
-                var hmac = HMAC.Create("HMACSHA256")!;
-                hmac.Key = DecryptBytesWithPrivateKey(Convert.FromBase64String(cryptography.AuthKey));
-
-                await using var hashStream = entry.OpenEntryStream();
+                var hmac = new HMACSHA256
+                {
+                    Key = DecryptBytesWithPrivateKey(Convert.FromBase64String(cryptography.AuthKey))
+                };
+                var hashStream = entry.OpenEntryStream();
+                await using var __ = hashStream.ConfigureAwait(false);
+                
+#if NETSTANDARD2_1
                 var hashBytes = hmac.ComputeHash(hashStream);
+#else
+                var hashBytes = await hmac.ComputeHashAsync(hashStream, cancellationToken).ConfigureAwait(false);
+#endif
+                
                 var hash = Convert.ToBase64String(hashBytes);
 
                 if (!string.Equals(hash, cryptography.AuthCode))
@@ -63,8 +72,10 @@
 
                 using var decryptor = cryptoProvider.CreateDecryptor();
                 var (dispose, outputStream) = outputStreamFinder(entry.Key);
-                await using var contentStream = entry.OpenEntryStream();
-                await using var cryptoStream = new CryptoStream(contentStream, decryptor, CryptoStreamMode.Read);
+                var contentStream = entry.OpenEntryStream();
+                await using var ___ = contentStream.ConfigureAwait(false);
+                var cryptoStream = new CryptoStream(contentStream, decryptor, CryptoStreamMode.Read);
+                await using var ____ = cryptoStream.ConfigureAwait(false);
                 await cryptoStream.CopyToAsync(outputStream, cancellationToken).ConfigureAwait(false);
 
                 if (dispose)

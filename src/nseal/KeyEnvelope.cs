@@ -31,8 +31,9 @@
         /// </summary>
         /// <param name="password">The password to encrypt the key with.</param>
         /// <param name="salt">The password salt</param>
+        /// <param name="iterations">The amount of hash iterations</param>
         /// <returns>An instance of a <see cref="KeyEnvelope"/>.</returns>
-        public static async Task<KeyEnvelope> Create(string password, byte[]? salt = null)
+        public static async Task<KeyEnvelope> Create(string password, byte[]? salt = null, int iterations = 1000)
         {
             if (salt == null)
             {
@@ -42,7 +43,7 @@
 
             var dek = new byte[KeyLength];
             RandomNumberGenerator.Fill(dek);
-            using var derivedBytes = new Rfc2898DeriveBytes(password, salt);
+            using var derivedBytes = new Rfc2898DeriveBytes(password, salt, iterations, HashAlgorithmName.SHA256);
             // Encrypt the data.
             using var encAlg = Aes.Create();
             encAlg.GenerateIV();
@@ -52,7 +53,11 @@
             await using CryptoStream encrypt = new(encryptionStream, encAlg.CreateEncryptor(), CryptoStreamMode.Write);
 
             await encrypt.WriteAsync(dek).ConfigureAwait(false);
+            #if NETSTANDARD2_1
             encrypt.FlushFinalBlock();
+            #else
+            await encrypt.FlushFinalBlockAsync().ConfigureAwait(false);
+            #endif
             encrypt.Close();
             await encryptionStream.FlushAsync().ConfigureAwait(false);
 
@@ -66,14 +71,15 @@
         /// <param name="oldPassword">The old password</param>
         /// <param name="newPassword">The new password</param>
         /// <param name="newSalt">New salt to apply to changed password</param>
+        /// <param name="iterations">The amount of hash iterations</param>
         /// <returns>A <see cref="Task"/> for the async operation.</returns>
-        public async Task ChangePassword(string oldPassword, string newPassword, byte[]? newSalt = null)
+        public async Task ChangePassword(string oldPassword, string newPassword, byte[]? newSalt = null, int iterations = 1000)
         {
             var key = await GetDek(oldPassword).ConfigureAwait(false);
             newSalt ??= _salt;
             RandomNumberGenerator.Fill(newSalt);
             _salt = newSalt;
-            using var derivedBytes = new Rfc2898DeriveBytes(newPassword, _salt);
+            using var derivedBytes = new Rfc2898DeriveBytes(newPassword, _salt, iterations, HashAlgorithmName.SHA256);
             using var algo = Aes.Create();
             algo.Key = derivedBytes.GetBytes(KeyLength);
             algo.GenerateIV();
@@ -93,10 +99,11 @@
         /// Gets the data encryption key.
         /// </summary>
         /// <param name="password">The password to decrypt the data encryption key.</param>
+        /// <param name="iterations">The amount of hash iterations</param>
         /// <returns>The data encryption key as a <see cref="Task{T}"/></returns>
-        public async Task<byte[]> GetDek(string password)
+        public async Task<byte[]> GetDek(string password, int iterations = 1000)
         {
-            using var deriveBytes = new Rfc2898DeriveBytes(password, _salt);
+            using var deriveBytes = new Rfc2898DeriveBytes(password, _salt, iterations, HashAlgorithmName.SHA256);
 
             using var decAlg = Aes.Create();
             decAlg.Key = deriveBytes.GetBytes(KeyLength);

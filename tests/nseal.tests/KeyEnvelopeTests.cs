@@ -31,14 +31,17 @@ namespace NSeal.Tests
             var algo = Aes.Create();
             algo.Key = dek;
             algo.GenerateIV();
-            await using var output = new MemoryStream();
-            await using var encrypt = new CryptoStream(output, algo.CreateEncryptor(), CryptoStreamMode.Write);
+            var output = new MemoryStream();
+            await using var _ = output.ConfigureAwait(false);
+            var encrypt = new CryptoStream(output, algo.CreateEncryptor(), CryptoStreamMode.Write);
+            await using var __ = encrypt.ConfigureAwait(false);
             await encrypt.WriteAsync(data).ConfigureAwait(false);
             await encrypt.FlushFinalBlockAsync().ConfigureAwait(false);
 
             algo.Key = await envelope.GetDek("blah").ConfigureAwait(false);
             output.Position = 0;
-            await using var decrypt = new CryptoStream(output, algo.CreateDecryptor(), CryptoStreamMode.Read);
+            var decrypt = new CryptoStream(output, algo.CreateDecryptor(), CryptoStreamMode.Read);
+            await using var ___ = decrypt.ConfigureAwait(false);
             var buffer = new byte[9];
 
             await Assert.ThrowsAsync<CryptographicException>(() => decrypt.ReadAsync(buffer).AsTask()).ConfigureAwait(false);
@@ -78,9 +81,11 @@ namespace NSeal.Tests
             var envelope = await KeyEnvelope.Create(Password).ConfigureAwait(false);
             const string helloWorld = "Hello, World";
             var content = Encoding.UTF8.GetBytes(helloWorld);
-            await using var contentStream = new MemoryStream();
-            await using (var encryption =
-                     await envelope.CreateEncryptionStream(Password, contentStream).ConfigureAwait(false))
+            var contentStream = new MemoryStream();
+            await using var _ = contentStream.ConfigureAwait(false);
+            var encryption =
+                await envelope.CreateEncryptionStream(Password, contentStream).ConfigureAwait(false);
+            await using (encryption.ConfigureAwait(false))
             {
                 await encryption.WriteAsync(content).ConfigureAwait(false);
                 await encryption.FlushAsync().ConfigureAwait(false);

@@ -105,8 +105,12 @@
 
             encryptedStream.Position = 0;
 
-            using var hmac = HMAC.Create("HMACSHA256")!;
+            using var hmac = new HMACSHA256();
+#if NETSTANDARD2_1
             var hash = hmac.ComputeHash(encryptedStream);
+#else
+            var hash = await hmac.ComputeHashAsync(encryptedStream, cancellationToken).ConfigureAwait(false);
+#endif
             encryptedStream.Position = 0;
 
             outerZip.AddEntry(encryptionContentKey, encryptedStream, encryptedStream.Length);
@@ -169,7 +173,8 @@
             const int length = 4096;
             var arrayPool = ArrayPool<byte>.Shared;
             var buffer = arrayPool.Rent(length);
-            await using var cs = new CryptoStream(encryptedStream, encryptor, CryptoStreamMode.Write, true);
+            var cs = new CryptoStream(encryptedStream, encryptor, CryptoStreamMode.Write, true);
+            await using var _ = cs.ConfigureAwait(false);
             int read;
             while ((read = await content.ReadAsync(buffer.AsMemory(0, length), cancellationToken).ConfigureAwait(false)) > 0)
             {

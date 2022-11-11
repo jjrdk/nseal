@@ -25,14 +25,17 @@ namespace NSeal.Tests
             algorithm.GenerateKey();
             algorithm.GenerateIV();
 
-            await using var file = File.OpenRead("test.pem");
+            var file = File.OpenRead("test.pem");
+            await using var __ = file.ConfigureAwait(false);
             using var reader = new PemReader(file);
             using var cryptoStreamer = new CryptoSealer(
                 RSA.Create(reader.ReadRsaKey()),
                 () => algorithm);
 
-            await using var output = new MemoryStream();
-            await using var contentStream = new MemoryStream(Encoding.UTF8.GetBytes(HelloWorld));
+            var output = new MemoryStream();
+            await using var ___ = output.ConfigureAwait(false);
+            var contentStream = new MemoryStream(Encoding.UTF8.GetBytes(HelloWorld));
+            await using var ____ = contentStream.ConfigureAwait(false);
             await cryptoStreamer.Encrypt(new[] { new EncryptionContent("item.txt", contentStream) }, output).ConfigureAwait(false);
             output.Position = 0;
 
@@ -41,7 +44,8 @@ namespace NSeal.Tests
             var rsa = RSA.Create(parameters);
             var decryptStreamer = new CryptoUnsealer(rsa);
 
-            await using var ms = new MemoryStream();
+            var ms = new MemoryStream();
+            await using var _____ = ms.ConfigureAwait(false);
             await decryptStreamer.Decrypt(output, _ => (false, ms)).ConfigureAwait(false);
             ms.Position = 0;
 
