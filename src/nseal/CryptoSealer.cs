@@ -1,4 +1,6 @@
-﻿namespace NSeal
+﻿using Newtonsoft.Json;
+
+namespace NSeal
 {
     using System;
     using System.Buffers;
@@ -8,7 +10,6 @@
     using System.Text;
     using System.Threading;
     using System.Threading.Tasks;
-    using Newtonsoft.Json;
     using SharpCompress.Archives.Zip;
     using SharpCompress.Compressors.Deflate;
 
@@ -194,7 +195,6 @@
         public void Dispose()
         {
             _receiverPublicKey.Dispose();
-            GC.SuppressFinalize(this);
         }
     }
 }
