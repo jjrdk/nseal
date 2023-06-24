@@ -1,4 +1,6 @@
-﻿namespace NSeal
+﻿using System.Text.Json;
+
+namespace NSeal
 {
     using System;
     using System.IO;
@@ -6,13 +8,11 @@
     using System.Security.Cryptography;
     using System.Threading;
     using System.Threading.Tasks;
-    using Newtonsoft.Json;
     using SharpCompress.Archives.Zip;
 
     public sealed class CryptoUnsealer : IDisposable
     {
         private readonly RSA _privateKey;
-        private readonly JsonSerializer _serializer = JsonSerializer.Create(CryptoSettings.SerializerSettings);
 
         public CryptoUnsealer(RSA privateKey)
         {
@@ -23,7 +23,10 @@
         {
             return Decrypt(
                 package,
-                key => (true, File.Create(Path.Combine(outputFolder, Path.GetFileNameWithoutExtension(key) ?? key), 4096, FileOptions.Asynchronous)));
+                key => (
+                    true,
+                    File.Create(Path.Combine(outputFolder, Path.GetFileNameWithoutExtension(key)), 4096,
+                        FileOptions.Asynchronous)));
         }
 
         public async Task Decrypt(
@@ -35,9 +38,9 @@
             var metadataEntry = archive.Entries.First(x => x.Key == "metadata.json");
             var metadataStream = metadataEntry.OpenEntryStream();
             await using var _ = metadataStream.ConfigureAwait(false);
-            using var reader = new StreamReader(metadataStream);
-            var jsonReader = new JsonTextReader(reader);
-            var metadata = _serializer.Deserialize<PackageContainer>(jsonReader);
+            var metadata = await JsonSerializer.DeserializeAsync<PackageContainer>(
+                metadataStream,
+                CryptoSettings.SerializerSettings, cancellationToken);
             if (metadata == null)
             {
                 throw new InvalidDataException("Could not read metadata");
@@ -56,13 +59,8 @@
                 };
                 var hashStream = entry.OpenEntryStream();
                 await using var __ = hashStream.ConfigureAwait(false);
-                
-#if NETSTANDARD2_1
-                var hashBytes = hmac.ComputeHash(hashStream);
-#else
+
                 var hashBytes = await hmac.ComputeHashAsync(hashStream, cancellationToken).ConfigureAwait(false);
-#endif
-                
                 var hash = Convert.ToBase64String(hashBytes);
 
                 if (!string.Equals(hash, cryptography.AuthCode))
@@ -90,10 +88,10 @@
         {
             SymmetricAlgorithm algo = cryptography.Algorithm switch
             {
-                "aes" => Aes.Create()!,
-                "des" => DES.Create()!,
-                "tripledes" => TripleDES.Create()!,
-                "rc2" => RC2.Create()!,
+                "aes" => Aes.Create(),
+                "des" => DES.Create(),
+                "tripledes" => TripleDES.Create(),
+                "rc2" => RC2.Create(),
                 _ => throw new ArgumentException("Unknown or unsupported algorithm", cryptography.Algorithm)
             };
 
@@ -116,7 +114,6 @@
         public void Dispose()
         {
             _privateKey.Dispose();
-            GC.SuppressFinalize(this);
         }
     }
 }

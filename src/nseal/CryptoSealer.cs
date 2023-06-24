@@ -1,4 +1,4 @@
-﻿using Newtonsoft.Json;
+﻿using System.Text.Json;
 
 namespace NSeal
 {
@@ -18,7 +18,6 @@ namespace NSeal
     /// </summary>
     public sealed class CryptoSealer : IDisposable
     {
-        private readonly JsonSerializer _serializer = JsonSerializer.Create(CryptoSettings.SerializerSettings);
         private readonly RSA _receiverPublicKey;
         private readonly Func<SymmetricAlgorithm> _algo;
 
@@ -47,20 +46,22 @@ namespace NSeal
             outerZip.DeflateCompressionLevel = CompressionLevel.BestCompression;
 
             var contentStreams = new List<Stream>();
+            using var algo = _algo();
+
+            algo.GenerateKey();
+            algo.GenerateIV();
+            using var encryptor = algo.CreateEncryptor();
             foreach (var encryptionContent in content)
             {
-                using var algo = _algo();
-
-                algo.GenerateKey();
-                algo.GenerateIV();
-                using var encryptor = algo.CreateEncryptor();
-                var (bundle, stream) = await CreateBundle(encryptionContent, encryptor, outerZip, algo).ConfigureAwait(false);
+                var (bundle, stream) =
+                    await CreateBundle(encryptionContent, encryptor, outerZip, algo).ConfigureAwait(false);
 
                 contentStreams.Add(stream);
 
                 metadata.Bundles.Add(bundle);
             }
-            var metadataStream = WriteMetadata(metadata, outerZip);
+
+            var metadataStream = await WriteMetadata(metadata, outerZip);
             contentStreams.Add(metadataStream);
 
             outerZip.SaveTo(output);
@@ -71,12 +72,11 @@ namespace NSeal
             }
         }
 
-        private Stream WriteMetadata(PackageContainer metadata, ZipArchive outerZip)
+        private static async Task<Stream> WriteMetadata(PackageContainer metadata, ZipArchive outerZip)
         {
             var metadataStream = new MemoryStream();
-            using var streamWriter = new StreamWriter(metadataStream, Encoding.UTF8, 4096, true);
-            using var jsonWriter = new JsonTextWriter(streamWriter);
-            _serializer.Serialize(jsonWriter, metadata, typeof(PackageContainer));
+            await JsonSerializer.SerializeAsync(metadataStream, metadata,
+                CryptoSettings.SerializerSettings);
             outerZip.AddEntry("metadata.json", metadataStream, metadataStream.Length);
 
             return metadataStream;
@@ -102,16 +102,13 @@ namespace NSeal
             var encryptionContentKey = encryptionContent.Key + ".enc";
 
             var encryptedStream = new MemoryStream();
-            await WriteEncrypted(encryptionContent.Content, encryptor, encryptedStream, cancellationToken).ConfigureAwait(false);
+            await WriteEncrypted(encryptionContent.Content, encryptor, encryptedStream, cancellationToken)
+                .ConfigureAwait(false);
 
             encryptedStream.Position = 0;
 
             using var hmac = new HMACSHA256();
-#if NETSTANDARD2_1
-            var hash = hmac.ComputeHash(encryptedStream);
-#else
             var hash = await hmac.ComputeHashAsync(encryptedStream, cancellationToken).ConfigureAwait(false);
-#endif
             encryptedStream.Position = 0;
 
             outerZip.AddEntry(encryptionContentKey, encryptedStream, encryptedStream.Length);
@@ -119,7 +116,11 @@ namespace NSeal
             return (bundle, encryptedStream);
         }
 
-        private Bundle BuildBundle(SymmetricAlgorithm algorithm, string encryptionContentKey, byte[] authCode, byte[] hmacKey)
+        private Bundle BuildBundle(
+            SymmetricAlgorithm algorithm,
+            string encryptionContentKey,
+            byte[] authCode,
+            byte[] hmacKey)
         {
             return new Bundle
             {
@@ -133,7 +134,8 @@ namespace NSeal
                     CipherMode = algorithm.Mode,
                     Padding = algorithm.Padding,
                     InitVector = Convert.ToBase64String(algorithm.IV),
-                    EncryptionKey = Convert.ToBase64String(_receiverPublicKey.Encrypt(algorithm.Key, RSAEncryptionPadding.Pkcs1)),
+                    EncryptionKey =
+                        Convert.ToBase64String(_receiverPublicKey.Encrypt(algorithm.Key, RSAEncryptionPadding.Pkcs1)),
                     AuthCode = Convert.ToBase64String(authCode),
                     AuthKey = Convert.ToBase64String(_receiverPublicKey.Encrypt(hmacKey, RSAEncryptionPadding.Pkcs1))
                 }
@@ -177,17 +179,14 @@ namespace NSeal
             var cs = new CryptoStream(encryptedStream, encryptor, CryptoStreamMode.Write, true);
             await using var _ = cs.ConfigureAwait(false);
             int read;
-            while ((read = await content.ReadAsync(buffer.AsMemory(0, length), cancellationToken).ConfigureAwait(false)) > 0)
+            while ((read = await content.ReadAsync(buffer.AsMemory(0, length), cancellationToken)
+                    .ConfigureAwait(false)) > 0)
             {
                 await cs.WriteAsync(buffer.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
             }
 
             await cs.FlushAsync(cancellationToken).ConfigureAwait(false);
-#if NETSTANDARD2_1
-            cs.FlushFinalBlock();
-#else
             await cs.FlushFinalBlockAsync(cancellationToken).ConfigureAwait(false);
-#endif
             cs.Close();
             arrayPool.Return(buffer);
         }

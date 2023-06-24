@@ -1,4 +1,7 @@
-﻿namespace NSeal
+﻿using System.Text.Json;
+using System.Text.Json.Serialization;
+
+namespace NSeal
 {
     using System.IO;
     using System.Security.Cryptography;
@@ -12,6 +15,7 @@
         private byte[] _salt;
         private const int KeyLength = 32;
         private const int SaltLength = 16;
+        private readonly JsonSerializerOptions _options;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="KeyEnvelope"/> sealed class.
@@ -24,6 +28,7 @@
             _salt = salt;
             EncryptedDek = encryptedDek;
             InitializationVector = initializationVector;
+            _options = CryptoSettings.Create(salt);
         }
 
         /// <summary>
@@ -53,11 +58,7 @@
             await using CryptoStream encrypt = new(encryptionStream, encAlg.CreateEncryptor(), CryptoStreamMode.Write);
 
             await encrypt.WriteAsync(dek).ConfigureAwait(false);
-            #if NETSTANDARD2_1
-            encrypt.FlushFinalBlock();
-            #else
             await encrypt.FlushFinalBlockAsync().ConfigureAwait(false);
-            #endif
             encrypt.Close();
             await encryptionStream.FlushAsync().ConfigureAwait(false);
 
@@ -89,7 +90,7 @@
             await using CryptoStream encrypt = new(encryptionStream, algo.CreateEncryptor(), CryptoStreamMode.Write);
 
             await encrypt.WriteAsync(key).ConfigureAwait(false);
-            encrypt.FlushFinalBlock();
+            await encrypt.FlushFinalBlockAsync();
             encrypt.Close();
             await encryptionStream.FlushAsync().ConfigureAwait(false);
             EncryptedDek = encryptionStream.ToArray();
@@ -138,11 +139,13 @@
         /// <summary>
         /// Gets the encrypted data encrypted key.
         /// </summary>
+        [JsonPropertyName("dek")]
         public byte[] EncryptedDek { get; private set; }
 
         /// <summary>
         /// Gets the encryption initialization vector.
         /// </summary>
+        [JsonPropertyName("iv")]
         public byte[] InitializationVector { get; private set; }
     }
 }

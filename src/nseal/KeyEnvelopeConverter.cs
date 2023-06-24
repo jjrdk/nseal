@@ -1,7 +1,9 @@
-﻿namespace NSeal
+﻿using System.Text.Json;
+using System.Text.Json.Serialization;
+
+namespace NSeal
 {
     using System;
-    using Newtonsoft.Json;
 
     /// <summary>
     /// Defines the <see cref="KeyEnvelope"/> converter.
@@ -20,28 +22,16 @@
         }
 
         /// <inheritdoc />
-        public override void WriteJson(JsonWriter writer, KeyEnvelope? value, JsonSerializer serializer)
+        public override void Write(Utf8JsonWriter writer, KeyEnvelope value, JsonSerializerOptions options)
         {
-            if(value == null)
-            {
-                writer.WriteNull();
-                return;
-            }
             writer.WriteStartObject();
-            writer.WritePropertyName("dek");
-            serializer.Serialize(writer, value.EncryptedDek);
-            writer.WritePropertyName("iv");
-            serializer.Serialize(writer, value.InitializationVector);
+            writer.WriteBase64String("dek", value.EncryptedDek);
+            writer.WriteBase64String("iv", value.InitializationVector);
             writer.WriteEndObject();
         }
 
         /// <inheritdoc />
-        public override KeyEnvelope ReadJson(
-            JsonReader reader,
-            Type objectType,
-            KeyEnvelope? existingValue,
-            bool hasExistingValue,
-            JsonSerializer serializer)
+        public override KeyEnvelope Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
             byte[]? dek = null;
             byte[]? iv = null;
@@ -49,17 +39,22 @@
             {
                 switch (reader.TokenType)
                 {
-                    case JsonToken.PropertyName:
-                        switch (reader.Path)
+                    case JsonTokenType.PropertyName:
+                        switch (reader.GetString())
                         {
                             case "dek":
-                                dek = reader.ReadAsBytes();
+                                reader.Read();
+                                dek = reader.GetBytesFromBase64();
                                 break;
                             case "iv":
-                                iv = reader.ReadAsBytes();
+                                reader.Read();
+                                iv = reader.GetBytesFromBase64();
                                 break;
                         }
+
                         break;
+                    default:
+                        continue;
                 }
             }
 

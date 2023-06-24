@@ -5,7 +5,6 @@ namespace NSeal.Tests
     using System.Security.Cryptography;
     using System.Text;
     using System.Threading.Tasks;
-    using Newtonsoft.Json;
     using Xunit;
 
     public sealed class KeyEnvelopeTests
@@ -64,12 +63,13 @@ namespace NSeal.Tests
         public async Task CanRecreateEnvelopFromJson()
         {
             var salt = Enumerable.Range(0, 16).Select(x => (byte)x).ToArray();
-            var converter = new KeyEnvelopeConverter(salt);
+            //var converter = new KeyEnvelopeConverter(salt);
 
+            var serializerOptions = CryptoSettings.Create(Encoding.UTF8.GetBytes(Password));
             var envelope = await KeyEnvelope.Create(Password, salt).ConfigureAwait(false);
-            var json = JsonConvert.SerializeObject(envelope, converter);
+            var json = System.Text.Json.JsonSerializer.Serialize(envelope, serializerOptions);
 
-            var recreated = JsonConvert.DeserializeObject<KeyEnvelope>(json, converter);
+            var recreated = System.Text.Json.JsonSerializer.Deserialize<KeyEnvelope>(json, serializerOptions);
 
             Assert.Equal(envelope.EncryptedDek, recreated!.EncryptedDek);
             Assert.Equal(envelope.InitializationVector, recreated.InitializationVector);
@@ -90,7 +90,7 @@ namespace NSeal.Tests
                 await encryption.WriteAsync(content).ConfigureAwait(false);
                 await encryption.FlushAsync().ConfigureAwait(false);
             }
-            
+
             contentStream.Position = 0;
 
             var decryption = await envelope.CreateDecryptionStream(Password, contentStream).ConfigureAwait(false);
