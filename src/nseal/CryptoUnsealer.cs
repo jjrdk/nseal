@@ -1,32 +1,45 @@
-﻿using System.Text.Json;
-
-namespace NSeal
+﻿namespace NSeal
 {
     using System;
     using System.IO;
     using System.Linq;
     using System.Security.Cryptography;
+    using System.Text.Json;
     using System.Threading;
     using System.Threading.Tasks;
     using SharpCompress.Archives.Zip;
 
+    /// <summary>
+    /// Defines the crypto unsealer type.
+    /// </summary>
     public sealed class CryptoUnsealer : IDisposable
     {
         private readonly RSA _privateKey;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="CryptoUnsealer"/> sealed class.
+        /// </summary>
+        /// <param name="privateKey"></param>
         public CryptoUnsealer(RSA privateKey)
         {
             _privateKey = privateKey;
         }
 
-        public Task Decrypt(Stream package, string outputFolder)
+        /// <summary>
+        /// Decrypts the passed package into the passed output folder.
+        /// </summary>
+        /// <param name="package">The package to decrypt.</param>
+        /// <param name="outputFolder">The output folder to decrypt to</param>
+        /// <param name="cancellationToken">The <see cref="CancellationToken"/> for the async operation.</param>
+        /// <returns>The decryption operation as a <see cref="Task"/>.</returns>
+        public Task Decrypt(Stream package, string outputFolder, CancellationToken cancellationToken = default)
         {
             return Decrypt(
                 package,
                 key => (
                     true,
                     File.Create(Path.Combine(outputFolder, Path.GetFileNameWithoutExtension(key)), 4096,
-                        FileOptions.Asynchronous)));
+                        FileOptions.Asynchronous)), cancellationToken);
         }
 
         public async Task Decrypt(
@@ -40,7 +53,7 @@ namespace NSeal
             await using var _ = metadataStream.ConfigureAwait(false);
             var metadata = await JsonSerializer.DeserializeAsync<PackageContainer>(
                 metadataStream,
-                CryptoSettings.SerializerSettings, cancellationToken);
+                CryptoSettings.SerializerSettings, cancellationToken).ConfigureAwait(false);
             if (metadata == null)
             {
                 throw new InvalidDataException("Could not read metadata");
@@ -111,6 +124,7 @@ namespace NSeal
             return result;
         }
 
+        ///<inheritdoc />
         public void Dispose()
         {
             _privateKey.Dispose();

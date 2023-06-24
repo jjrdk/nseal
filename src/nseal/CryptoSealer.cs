@@ -7,7 +7,6 @@ namespace NSeal
     using System.Collections.Generic;
     using System.IO;
     using System.Security.Cryptography;
-    using System.Text;
     using System.Threading;
     using System.Threading.Tasks;
     using SharpCompress.Archives.Zip;
@@ -37,8 +36,12 @@ namespace NSeal
         /// </summary>
         /// <param name="content">The content to encrypt.</param>
         /// <param name="output">The <see cref="Stream"/> to write output to.</param>
+        /// <param name="cancellationToken">The <see cref="CancellationToken"/> for the async operation.</param>
         /// <returns>A <see cref="Task"/> for the async operation.</returns>
-        public async Task Encrypt(IEnumerable<EncryptionContent> content, Stream output)
+        public async Task Encrypt(
+            IEnumerable<EncryptionContent> content,
+            Stream output,
+            CancellationToken cancellationToken = default)
         {
             var metadata = new PackageContainer { Created = DateTimeOffset.Now };
 
@@ -54,14 +57,14 @@ namespace NSeal
             foreach (var encryptionContent in content)
             {
                 var (bundle, stream) =
-                    await CreateBundle(encryptionContent, encryptor, outerZip, algo).ConfigureAwait(false);
+                    await CreateBundle(encryptionContent, encryptor, outerZip, algo, cancellationToken).ConfigureAwait(false);
 
                 contentStreams.Add(stream);
 
                 metadata.Bundles.Add(bundle);
             }
 
-            var metadataStream = await WriteMetadata(metadata, outerZip);
+            var metadataStream = await WriteMetadata(metadata, outerZip, cancellationToken).ConfigureAwait(false);
             contentStreams.Add(metadataStream);
 
             outerZip.SaveTo(output);
@@ -72,11 +75,14 @@ namespace NSeal
             }
         }
 
-        private static async Task<Stream> WriteMetadata(PackageContainer metadata, ZipArchive outerZip)
+        private static async Task<Stream> WriteMetadata(
+            PackageContainer metadata,
+            ZipArchive outerZip,
+            CancellationToken cancellationToken)
         {
             var metadataStream = new MemoryStream();
             await JsonSerializer.SerializeAsync(metadataStream, metadata,
-                CryptoSettings.SerializerSettings);
+                CryptoSettings.SerializerSettings, cancellationToken).ConfigureAwait(false);
             outerZip.AddEntry("metadata.json", metadataStream, metadataStream.Length);
 
             return metadataStream;

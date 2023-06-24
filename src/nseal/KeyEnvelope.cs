@@ -1,8 +1,7 @@
-﻿using System.Text.Json;
-using System.Text.Json.Serialization;
-
-namespace NSeal
+﻿namespace NSeal
 {
+    using System.Text.Json.Serialization;
+    using System.Threading;
     using System.IO;
     using System.Security.Cryptography;
     using System.Threading.Tasks;
@@ -15,7 +14,6 @@ namespace NSeal
         private byte[] _salt;
         private const int KeyLength = 32;
         private const int SaltLength = 16;
-        private readonly JsonSerializerOptions _options;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="KeyEnvelope"/> sealed class.
@@ -28,7 +26,6 @@ namespace NSeal
             _salt = salt;
             EncryptedDek = encryptedDek;
             InitializationVector = initializationVector;
-            _options = CryptoSettings.Create(salt);
         }
 
         /// <summary>
@@ -73,8 +70,9 @@ namespace NSeal
         /// <param name="newPassword">The new password</param>
         /// <param name="newSalt">New salt to apply to changed password</param>
         /// <param name="iterations">The amount of hash iterations</param>
+        /// <param name="cancellationToken">The <see cref="CancellationToken"/> for the async operation.</param>
         /// <returns>A <see cref="Task"/> for the async operation.</returns>
-        public async Task ChangePassword(string oldPassword, string newPassword, byte[]? newSalt = null, int iterations = 1000)
+        public async Task ChangePassword(string oldPassword, string newPassword, byte[]? newSalt = null, int iterations = 1000, CancellationToken cancellationToken = default)
         {
             var key = await GetDek(oldPassword).ConfigureAwait(false);
             newSalt ??= _salt;
@@ -89,10 +87,10 @@ namespace NSeal
             await using MemoryStream encryptionStream = new();
             await using CryptoStream encrypt = new(encryptionStream, algo.CreateEncryptor(), CryptoStreamMode.Write);
 
-            await encrypt.WriteAsync(key).ConfigureAwait(false);
-            await encrypt.FlushFinalBlockAsync();
+            await encrypt.WriteAsync(key, cancellationToken).ConfigureAwait(false);
+            await encrypt.FlushFinalBlockAsync(cancellationToken).ConfigureAwait(false);
             encrypt.Close();
-            await encryptionStream.FlushAsync().ConfigureAwait(false);
+            await encryptionStream.FlushAsync(cancellationToken).ConfigureAwait(false);
             EncryptedDek = encryptionStream.ToArray();
         }
 
