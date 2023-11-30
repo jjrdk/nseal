@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.Linq;
+using System.Text.Json;
 
 namespace NSeal
 {
@@ -57,7 +58,8 @@ namespace NSeal
             foreach (var encryptionContent in content)
             {
                 var (bundle, stream) =
-                    await CreateBundle(encryptionContent, encryptor, outerZip, algo, cancellationToken).ConfigureAwait(false);
+                    await CreateBundle(encryptionContent, encryptor, outerZip, algo, cancellationToken)
+                        .ConfigureAwait(false);
 
                 contentStreams.Add(stream);
 
@@ -69,10 +71,7 @@ namespace NSeal
 
             outerZip.SaveTo(output);
 
-            foreach (var contentStream in contentStreams)
-            {
-                await contentStream.DisposeAsync().ConfigureAwait(false);
-            }
+            await Task.WhenAll(contentStreams.Select(s => s.DisposeAsync().AsTask()));
         }
 
         private static async Task<Stream> WriteMetadata(
@@ -125,7 +124,7 @@ namespace NSeal
         private Bundle BuildBundle(
             SymmetricAlgorithm algorithm,
             string encryptionContentKey,
-            byte[] authCode,
+            ReadOnlySpan<byte> authCode,
             byte[] hmacKey)
         {
             return new Bundle
@@ -134,7 +133,7 @@ namespace NSeal
                 ContentLink = encryptionContentKey,
                 Cryptography = new Cryptography
                 {
-                    Algorithm = GetAlgorithm(algorithm.GetType()),
+                    Algorithm = GetAlgorithm(algorithm),
                     BlockSize = algorithm.BlockSize,
                     KeySize = algorithm.KeySize,
                     CipherMode = algorithm.Mode,
@@ -148,29 +147,16 @@ namespace NSeal
             };
         }
 
-        private static string GetAlgorithm(Type type)
+        private static string GetAlgorithm(SymmetricAlgorithm type)
         {
-            if (typeof(Aes).IsAssignableFrom(type))
+            return type switch
             {
-                return "aes";
-            }
-
-            if (typeof(DES).IsAssignableFrom(type))
-            {
-                return "des";
-            }
-
-            if (typeof(TripleDES).IsAssignableFrom(type))
-            {
-                return "tripledes";
-            }
-
-            if (typeof(RC2).IsAssignableFrom(type))
-            {
-                return "rc2";
-            }
-
-            throw new ArgumentException("Unknown or unsupported algorithm type", nameof(type));
+                Aes => "aes",
+                DES => "des",
+                TripleDES => "tripledes",
+                RC2 => "rc2",
+                _ => throw new ArgumentException("Unknown or unsupported algorithm type", nameof(type))
+            };
         }
 
         private static async Task WriteEncrypted(
@@ -184,12 +170,7 @@ namespace NSeal
             var buffer = arrayPool.Rent(length);
             var cs = new CryptoStream(encryptedStream, encryptor, CryptoStreamMode.Write, true);
             await using var _ = cs.ConfigureAwait(false);
-            int read;
-            while ((read = await content.ReadAsync(buffer.AsMemory(0, length), cancellationToken)
-                    .ConfigureAwait(false)) > 0)
-            {
-                await cs.WriteAsync(buffer.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
-            }
+            await content.CopyToAsync(cs, length, cancellationToken).ConfigureAwait(false);
 
             await cs.FlushAsync(cancellationToken).ConfigureAwait(false);
             await cs.FlushFinalBlockAsync(cancellationToken).ConfigureAwait(false);

@@ -4,7 +4,7 @@
 
     internal sealed class Bundle
     {
-        public DateTimeOffset AssemblyTime { get; set; } = DateTimeOffset.Now;
+        public DateTimeOffset AssemblyTime { get; set; } = DateTimeOffset.UtcNow;
 
         public string ContentLink { get; set; } = string.Empty;
 
