@@ -1,4 +1,6 @@
-﻿namespace NSeal
+﻿using System.Diagnostics.CodeAnalysis;
+
+namespace NSeal
 {
     using System;
     using System.IO;
@@ -32,6 +34,10 @@
         /// <param name="outputFolder">The output folder to decrypt to</param>
         /// <param name="cancellationToken">The <see cref="CancellationToken"/> for the async operation.</param>
         /// <returns>The decryption operation as a <see cref="Task"/>.</returns>
+        [RequiresUnreferencedCode($"Requires reference to {nameof(PackageContainer)}")]
+#if NET8_0_OR_GREATER
+        [RequiresDynamicCode("Serializes to stream")]
+#endif
         public Task Decrypt(Stream package, string outputFolder, CancellationToken cancellationToken = default)
         {
             return Decrypt(
@@ -42,6 +48,10 @@
                         FileOptions.Asynchronous)), cancellationToken);
         }
 
+        [RequiresUnreferencedCode($"Requires reference to {nameof(PackageContainer)}")]
+#if NET8_0_OR_GREATER
+        [RequiresDynamicCode("Serializes to stream")]
+#endif
         public async Task Decrypt(
             Stream package,
             Func<string, (bool dispose, Stream content)> outputStreamFinder,

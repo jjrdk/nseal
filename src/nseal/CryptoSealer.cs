@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using System.Text.Json;
 
 namespace NSeal
@@ -39,6 +40,10 @@ namespace NSeal
         /// <param name="output">The <see cref="Stream"/> to write output to.</param>
         /// <param name="cancellationToken">The <see cref="CancellationToken"/> for the async operation.</param>
         /// <returns>A <see cref="Task"/> for the async operation.</returns>
+        [RequiresUnreferencedCode("Serializes to stream")]
+#if NET8_0_OR_GREATER
+        [RequiresDynamicCode("Serializes to stream")]
+#endif
         public async Task Encrypt(
             IEnumerable<EncryptionContent> content,
             Stream output,
@@ -74,6 +79,10 @@ namespace NSeal
             await Task.WhenAll(contentStreams.Select(s => s.DisposeAsync().AsTask()));
         }
 
+        [RequiresUnreferencedCode("Serializes to stream")]
+#if NET8_0_OR_GREATER
+        [RequiresDynamicCode("Serializes to stream")]
+#endif
         private static async Task<Stream> WriteMetadata(
             PackageContainer metadata,
             ZipArchive outerZip,

@@ -14,8 +14,8 @@ namespace NSeal.Tests
     public sealed class PfxEncryptionTests
     {
         private const string HelloWorld = "Hello, World";
-        readonly CryptoSealer _cryptoStreamer = null;
-        private readonly CryptoUnsealer _cryptoUnsealer = null;
+        readonly CryptoSealer _cryptoStreamer;
+        private readonly CryptoUnsealer _cryptoUnsealer;
 
         public PfxEncryptionTests()
         {
@@ -24,23 +24,23 @@ namespace NSeal.Tests
 
             using var reader = new PemReader(file);
             _cryptoStreamer = new CryptoSealer(RSA.Create(reader.ReadRsaKey()));
-            _cryptoUnsealer = new CryptoUnsealer(cert.GetRSAPrivateKey());
+            _cryptoUnsealer = new CryptoUnsealer(cert.GetRSAPrivateKey()!);
         }
 
         [Fact]
         public async Task CanDecryptContent()
         {
-            var output = await CreatePackage().ConfigureAwait(false);
+            var output = await CreatePackage();
             await using var _ = output.ConfigureAwait(false);
 
-            await _cryptoUnsealer.Decrypt(output, Path.GetFullPath("./")).ConfigureAwait(false);
+            await _cryptoUnsealer.Decrypt(output, Path.GetFullPath("./"));
             _cryptoUnsealer.Dispose();
-            await output.DisposeAsync().ConfigureAwait(false);
+            await output.DisposeAsync();
 
             var content = File.OpenRead("item.txt");
             await using var __ = content.ConfigureAwait(false);
             using var reader = new StreamReader(content);
-            var text = await reader.ReadToEndAsync().ConfigureAwait(false);
+            var text = await reader.ReadToEndAsync();
 
             Assert.Equal(HelloWorld, text);
         }
@@ -48,7 +48,7 @@ namespace NSeal.Tests
         [Fact]
         public async Task CanReadBackMetadata()
         {
-            var output = await CreatePackage().ConfigureAwait(false);
+            var output = await CreatePackage();
             await using var _ = output.ConfigureAwait(false);
             var outputArchive = ZipArchive.Open(output);
 
@@ -56,7 +56,7 @@ namespace NSeal.Tests
             var entryStream = entry.OpenEntryStream();
             await using var __ = entryStream.ConfigureAwait(false);
             using var streamReader = new StreamReader(entryStream);
-            var json = await streamReader.ReadToEndAsync().ConfigureAwait(false);
+            var json = await streamReader.ReadToEndAsync();
 
             var metadata = JsonConvert.DeserializeObject<PackageContainer>(json);
             Assert.Single(metadata.Bundles);

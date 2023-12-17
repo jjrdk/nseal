@@ -36,7 +36,7 @@ namespace NSeal.Tests
             await using var ___ = output.ConfigureAwait(false);
             var contentStream = new MemoryStream(Encoding.UTF8.GetBytes(HelloWorld));
             await using var ____ = contentStream.ConfigureAwait(false);
-            await cryptoStreamer.Encrypt(new[] { new EncryptionContent("item.txt", contentStream) }, output).ConfigureAwait(false);
+            await cryptoStreamer.Encrypt(new[] { new EncryptionContent("item.txt", contentStream) }, output);
             output.Position = 0;
 
             var pemReader = new PemReader(File.OpenRead("test.ppk"), true);
@@ -46,11 +46,11 @@ namespace NSeal.Tests
 
             var ms = new MemoryStream();
             await using var _____ = ms.ConfigureAwait(false);
-            await decryptStreamer.Decrypt(output, _ => (false, ms)).ConfigureAwait(false);
+            await decryptStreamer.Decrypt(output, _ => (false, ms));
             ms.Position = 0;
 
             using var resultReader = new StreamReader(ms);
-            var result = await resultReader.ReadToEndAsync().ConfigureAwait(false);
+            var result = await resultReader.ReadToEndAsync();
 
             Assert.Equal(HelloWorld, result.Trim('\0'));
         }
