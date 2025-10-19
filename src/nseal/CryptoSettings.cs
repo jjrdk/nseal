@@ -1,16 +1,16 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace NSeal
+namespace NSeal;
+
+internal static class CryptoSettings
 {
-    internal static class CryptoSettings
+    static CryptoSettings()
     {
-        static CryptoSettings()
+        SerializerSettings = new JsonSerializerOptions
         {
-            SerializerSettings = new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true, NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals,
-                IgnoreReadOnlyFields = true, WriteIndented = false,
+            PropertyNameCaseInsensitive = true, NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals,
+            IgnoreReadOnlyFields = true, WriteIndented = false,
 //                DateFormatHandling = DateFormatHandling.IsoDateFormat,
 //                DateParseHandling = DateParseHandling.DateTimeOffset,
 //                DateTimeZoneHandling = DateTimeZoneHandling.RoundtripKind,
@@ -22,23 +22,22 @@ namespace NSeal
 //                TypeNameHandling = TypeNameHandling.Auto,
 //                MissingMemberHandling = MissingMemberHandling.Ignore,
 //                NullValueHandling = NullValueHandling.Ignore
-            };
-            //SerializerSettings.Converters.Add(new KeyEnvelopeConverter());
+        };
+        //SerializerSettings.Converters.Add(new KeyEnvelopeConverter());
 //            SerializerSettings.Converters.Add(new StringEnumConverter(new CamelCaseNamingStrategy()));
-        }
-
-        public static JsonSerializerOptions Create(byte[] salt)
-        {
-            var options = new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true, NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals,
-                IgnoreReadOnlyFields = true, WriteIndented = false,
-            };
-
-            options.Converters.Add(new KeyEnvelopeConverter(salt));
-            return options;
-        }
-
-        public static JsonSerializerOptions SerializerSettings { get; }
     }
+
+    public static JsonSerializerOptions Create(byte[] salt)
+    {
+        var options = new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true, NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals,
+            IgnoreReadOnlyFields = true, WriteIndented = false,
+        };
+
+        options.Converters.Add(new KeyEnvelopeConverter(salt));
+        return options;
+    }
+
+    public static JsonSerializerOptions SerializerSettings { get; }
 }

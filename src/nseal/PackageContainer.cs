@@ -1,12 +1,11 @@
-﻿namespace NSeal
+﻿namespace NSeal;
+
+using System;
+using System.Collections.Generic;
+
+internal sealed class PackageContainer
 {
-    using System;
-    using System.Collections.Generic;
+    public DateTimeOffset Created { get; set; }
 
-    internal sealed class PackageContainer
-    {
-        public DateTimeOffset Created { get; set; }
-
-        public ICollection<Bundle> Bundles { get; set; } = new List<Bundle>();
-    }
+    public ICollection<Bundle> Bundles { get; set; } = new List<Bundle>();
 }

@@ -1,13 +1,12 @@
-﻿namespace NSeal
+﻿namespace NSeal;
+
+using System;
+
+internal sealed class Bundle
 {
-    using System;
+    public DateTimeOffset AssemblyTime { get; init; } = DateTimeOffset.UtcNow;
 
-    internal sealed class Bundle
-    {
-        public DateTimeOffset AssemblyTime { get; init; } = DateTimeOffset.UtcNow;
+    public string ContentLink { get; init; } = string.Empty;
 
-        public string ContentLink { get; init; } = string.Empty;
-
-        public Cryptography Cryptography { get; init; } = new();
-    }
+    public Cryptography Cryptography { get; init; } = new();
 }
