@@ -16,7 +16,12 @@ namespace NSeal.Tests
 
         [Theory]
         [MemberData(nameof(GetAlgoParams))]
-        public async Task CanEncryptWithDifferentAlgorithmsConfigurations(SymmetricAlgorithm algorithm, int blockSize, int keySize, CipherMode mode, PaddingMode padding)
+        public async Task CanEncryptWithDifferentAlgorithmsConfigurations(
+            SymmetricAlgorithm algorithm,
+            int blockSize,
+            int keySize,
+            CipherMode mode,
+            PaddingMode padding)
         {
             algorithm.BlockSize = blockSize;
             algorithm.KeySize = keySize;
@@ -36,7 +41,11 @@ namespace NSeal.Tests
             await using var ___ = output.ConfigureAwait(false);
             var contentStream = new MemoryStream(Encoding.UTF8.GetBytes(HelloWorld));
             await using var ____ = contentStream.ConfigureAwait(false);
-            await cryptoStreamer.Encrypt(new[] { new EncryptionContent("item.txt", contentStream) }, output);
+            await cryptoStreamer.Encrypt([
+                    new EncryptionContent("item.txt", contentStream)
+                ],
+                output,
+                true);
             output.Position = 0;
 
             var pemReader = new PemReader(File.OpenRead("test.ppk"), true);
@@ -57,11 +66,13 @@ namespace NSeal.Tests
 
         public static IEnumerable<object[]> GetAlgoParams()
         {
-            return from symmetric in new SymmetricAlgorithm[] { Aes.Create(), DES.Create(), TripleDES.Create(), RC2.Create() }
+            return from symmetric in new SymmetricAlgorithm[]
+                       { Aes.Create(), DES.Create(), TripleDES.Create(), RC2.Create() }
                    from blockSize in symmetric.LegalBlockSizes.SelectMany(GenerateKeySizes)
                    from keySize in symmetric.LegalKeySizes.SelectMany(GenerateKeySizes)
                    from mode in new[] { CipherMode.CBC, CipherMode.ECB }
-                   from padding in Enum.GetValues<PaddingMode>().Where(p => p != PaddingMode.None)
+                   from padding in Enum.GetValues<PaddingMode>()
+                       .Where(p => p != PaddingMode.Zeros && p != PaddingMode.None)
                    select new object[] { symmetric, blockSize, keySize, mode, padding };
         }
 

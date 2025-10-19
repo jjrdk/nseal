@@ -1,18 +1,15 @@
 ﻿using System.Diagnostics.CodeAnalysis;
-using System.Linq;
+using System.IO.Compression;
 using System.Text.Json;
 
 namespace NSeal
 {
     using System;
-    using System.Buffers;
     using System.Collections.Generic;
     using System.IO;
     using System.Security.Cryptography;
     using System.Threading;
     using System.Threading.Tasks;
-    using SharpCompress.Archives.Zip;
-    using SharpCompress.Compressors.Deflate;
 
     /// <summary>
     /// Defines the crypto sealer type.
@@ -31,6 +28,11 @@ namespace NSeal
         {
             _receiverPublicKey = receiverPublicKey;
             _algo = algo ?? CreateAes;
+            using var algorithm = _algo();
+            if (algorithm.Padding is PaddingMode.Zeros or PaddingMode.None)
+            {
+                throw new ArgumentException($"{algorithm.Padding} is not secure for encryption", nameof(algo));
+            }
         }
 
         /// <summary>
@@ -38,23 +40,20 @@ namespace NSeal
         /// </summary>
         /// <param name="content">The content to encrypt.</param>
         /// <param name="output">The <see cref="Stream"/> to write output to.</param>
+        /// <param name="leaveOpen">Toggles whether to leave the output stream open.</param>
         /// <param name="cancellationToken">The <see cref="CancellationToken"/> for the async operation.</param>
         /// <returns>A <see cref="Task"/> for the async operation.</returns>
         [RequiresUnreferencedCode("Serializes to stream")]
-#if NET8_0_OR_GREATER
         [RequiresDynamicCode("Serializes to stream")]
-#endif
         public async Task Encrypt(
             IEnumerable<EncryptionContent> content,
             Stream output,
+            bool leaveOpen = false,
             CancellationToken cancellationToken = default)
         {
             var metadata = new PackageContainer { Created = DateTimeOffset.Now };
 
-            using var outerZip = ZipArchive.Create();
-            outerZip.DeflateCompressionLevel = CompressionLevel.BestCompression;
-
-            var contentStreams = new List<Stream>();
+            using var outerZip = new ZipArchive(output, ZipArchiveMode.Create, leaveOpen);
             using var algo = _algo();
 
             algo.GenerateKey();
@@ -62,38 +61,28 @@ namespace NSeal
             using var encryptor = algo.CreateEncryptor();
             foreach (var encryptionContent in content)
             {
-                var (bundle, stream) =
+                var bundle =
                     await CreateBundle(encryptionContent, encryptor, outerZip, algo, cancellationToken)
                         .ConfigureAwait(false);
-
-                contentStreams.Add(stream);
 
                 metadata.Bundles.Add(bundle);
             }
 
-            var metadataStream = await WriteMetadata(metadata, outerZip, cancellationToken).ConfigureAwait(false);
-            contentStreams.Add(metadataStream);
-
-            outerZip.SaveTo(output);
-
-            await Task.WhenAll(contentStreams.Select(s => s.DisposeAsync().AsTask()));
+            await WriteMetadata(metadata, outerZip, cancellationToken).ConfigureAwait(false);
         }
 
         [RequiresUnreferencedCode("Serializes to stream")]
-#if NET8_0_OR_GREATER
         [RequiresDynamicCode("Serializes to stream")]
-#endif
-        private static async Task<Stream> WriteMetadata(
+        private static async Task WriteMetadata(
             PackageContainer metadata,
             ZipArchive outerZip,
             CancellationToken cancellationToken)
         {
-            var metadataStream = new MemoryStream();
-            await JsonSerializer.SerializeAsync(metadataStream, metadata,
+            var metadataEntry = outerZip.CreateEntry("metadata.json", CompressionLevel.Optimal);
+            await using var entryStream = metadataEntry.Open();
+            await JsonSerializer.SerializeAsync(entryStream, metadata,
                 CryptoSettings.SerializerSettings, cancellationToken).ConfigureAwait(false);
-            outerZip.AddEntry("metadata.json", metadataStream, metadataStream.Length);
-
-            return metadataStream;
+            await entryStream.FlushAsync(cancellationToken).ConfigureAwait(false);
         }
 
         private static SymmetricAlgorithm CreateAes()
@@ -106,28 +95,21 @@ namespace NSeal
             return algo;
         }
 
-        private async Task<(Bundle bundle, Stream stream)> CreateBundle(
+        private async Task<Bundle> CreateBundle(
             EncryptionContent encryptionContent,
             ICryptoTransform encryptor,
             ZipArchive outerZip,
-            SymmetricAlgorithm aes,
+            SymmetricAlgorithm algorithm,
             CancellationToken cancellationToken = default)
         {
-            var encryptionContentKey = encryptionContent.Key + ".enc";
-
-            var encryptedStream = new MemoryStream();
-            await WriteEncrypted(encryptionContent.Content, encryptor, encryptedStream, cancellationToken)
+            var encryptionContentKey = $"{encryptionContent.Key}.enc";
+            var encryptionContentEntry = outerZip.CreateEntry(encryptionContentKey, CompressionLevel.Optimal);
+            await using var entryStream = encryptionContentEntry.Open();
+            var (key, hash) = await WriteEncrypted(encryptionContent.Content, encryptor, entryStream, cancellationToken)
                 .ConfigureAwait(false);
 
-            encryptedStream.Position = 0;
-
-            using var hmac = new HMACSHA256();
-            var hash = await hmac.ComputeHashAsync(encryptedStream, cancellationToken).ConfigureAwait(false);
-            encryptedStream.Position = 0;
-
-            outerZip.AddEntry(encryptionContentKey, encryptedStream, encryptedStream.Length);
-            var bundle = BuildBundle(aes, encryptionContentKey, hash, hmac.Key);
-            return (bundle, encryptedStream);
+            var bundle = BuildBundle(algorithm, encryptionContentKey, hash, key);
+            return bundle;
         }
 
         private Bundle BuildBundle(
@@ -149,9 +131,11 @@ namespace NSeal
                     Padding = algorithm.Padding,
                     InitVector = Convert.ToBase64String(algorithm.IV),
                     EncryptionKey =
-                        Convert.ToBase64String(_receiverPublicKey.Encrypt(algorithm.Key, RSAEncryptionPadding.Pkcs1)),
+                        Convert.ToBase64String(_receiverPublicKey.Encrypt(algorithm.Key,
+                            RSAEncryptionPadding.OaepSHA256)),
                     AuthCode = Convert.ToBase64String(authCode),
-                    AuthKey = Convert.ToBase64String(_receiverPublicKey.Encrypt(hmacKey, RSAEncryptionPadding.Pkcs1))
+                    AuthKey = Convert.ToBase64String(_receiverPublicKey.Encrypt(hmacKey,
+                        RSAEncryptionPadding.OaepSHA256))
                 }
             };
         }
@@ -168,23 +152,20 @@ namespace NSeal
             };
         }
 
-        private static async Task WriteEncrypted(
+        private static async Task<(byte[] key, byte[] hash)> WriteEncrypted(
             Stream content,
             ICryptoTransform encryptor,
             Stream encryptedStream,
             CancellationToken cancellationToken = default)
         {
             const int length = 4096;
-            var arrayPool = ArrayPool<byte>.Shared;
-            var buffer = arrayPool.Rent(length);
             var cs = new CryptoStream(encryptedStream, encryptor, CryptoStreamMode.Write, true);
             await using var _ = cs.ConfigureAwait(false);
-            await content.CopyToAsync(cs, length, cancellationToken).ConfigureAwait(false);
-
-            await cs.FlushAsync(cancellationToken).ConfigureAwait(false);
+            await using var hasher = new HashingStream(cs);
+            await content.CopyToAsync(hasher, length, cancellationToken).ConfigureAwait(false);
+            await hasher.FlushAsync(cancellationToken).ConfigureAwait(false);
             await cs.FlushFinalBlockAsync(cancellationToken).ConfigureAwait(false);
-            cs.Close();
-            arrayPool.Return(buffer);
+            return hasher.GetHash();
         }
 
         public void Dispose()

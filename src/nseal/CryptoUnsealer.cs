@@ -1,15 +1,15 @@
 ﻿using System.Diagnostics.CodeAnalysis;
+using System.IO.Compression;
+using System.Linq;
 
 namespace NSeal
 {
     using System;
     using System.IO;
-    using System.Linq;
     using System.Security.Cryptography;
     using System.Text.Json;
     using System.Threading;
     using System.Threading.Tasks;
-    using SharpCompress.Archives.Zip;
 
     /// <summary>
     /// Defines the crypto unsealer type.
@@ -35,9 +35,7 @@ namespace NSeal
         /// <param name="cancellationToken">The <see cref="CancellationToken"/> for the async operation.</param>
         /// <returns>The decryption operation as a <see cref="Task"/>.</returns>
         [RequiresUnreferencedCode($"Requires reference to {nameof(PackageContainer)}")]
-#if NET8_0_OR_GREATER
         [RequiresDynamicCode("Serializes to stream")]
-#endif
         public Task Decrypt(Stream package, string outputFolder, CancellationToken cancellationToken = default)
         {
             return Decrypt(
@@ -49,17 +47,15 @@ namespace NSeal
         }
 
         [RequiresUnreferencedCode($"Requires reference to {nameof(PackageContainer)}")]
-#if NET8_0_OR_GREATER
         [RequiresDynamicCode("Serializes to stream")]
-#endif
         public async Task Decrypt(
             Stream package,
             Func<string, (bool dispose, Stream content)> outputStreamFinder,
             CancellationToken cancellationToken = default)
         {
-            var archive = ZipArchive.Open(package);
-            var metadataEntry = archive.Entries.First(x => x.Key == "metadata.json");
-            var metadataStream = metadataEntry.OpenEntryStream();
+            var archive = new ZipArchive(package, ZipArchiveMode.Read);
+            var metadataEntry = archive.Entries.First(x => x.Name == "metadata.json");
+            var metadataStream = metadataEntry.Open();
             await using var _ = metadataStream.ConfigureAwait(false);
             var metadata = await JsonSerializer.DeserializeAsync<PackageContainer>(
                 metadataStream,
@@ -74,36 +70,36 @@ namespace NSeal
                 var cryptography = bundle.Cryptography;
                 var cryptoProvider = CreateCryptoProvider(cryptography);
 
-                var entry = archive.Entries.First(x => x.Key == bundle.ContentLink);
-
-                var hmac = new HMACSHA256
+                var entry = archive.Entries.First(x => x.Name == bundle.ContentLink);
+                if (entry == null || entry.Name != bundle.ContentLink)
                 {
-                    Key = DecryptBytesWithPrivateKey(Convert.FromBase64String(cryptography.AuthKey))
-                };
-                var hashStream = entry.OpenEntryStream();
-                await using var __ = hashStream.ConfigureAwait(false);
+                    throw new InvalidDataException($"Could not find entry {bundle.ContentLink}");
+                }
 
-                var hashBytes = await hmac.ComputeHashAsync(hashStream, cancellationToken).ConfigureAwait(false);
-                var hash = Convert.ToBase64String(hashBytes);
+                var key = DecryptBytesWithPrivateKey(Convert.FromBase64String(cryptography.AuthKey));
 
-                if (!string.Equals(hash, cryptography.AuthCode))
+                using var decryptor = cryptoProvider.CreateDecryptor();
+                var (dispose, outputStream) = outputStreamFinder(entry.Name);
+                var contentStream = entry.Open();
+                await using var ___ = contentStream.ConfigureAwait(false);
+                var cryptoStream = new CryptoStream(contentStream, decryptor, CryptoStreamMode.Read);
+                await using var ____ = cryptoStream.ConfigureAwait(false);
+                await using var hashingStream = new HashingStream(cryptoStream, key);
+                await hashingStream.CopyToAsync(outputStream, cancellationToken).ConfigureAwait(false);
+                var (_, hash) = hashingStream.GetHash();
+                var a = Convert.ToBase64String(hash);
+                if (!string.Equals(a, cryptography.AuthCode))
                 {
                     throw new InvalidDataException("Invalid file hash");
                 }
 
-                using var decryptor = cryptoProvider.CreateDecryptor();
-                var (dispose, outputStream) = outputStreamFinder(entry.Key);
-                var contentStream = entry.OpenEntryStream();
-                await using var ___ = contentStream.ConfigureAwait(false);
-                var cryptoStream = new CryptoStream(contentStream, decryptor, CryptoStreamMode.Read);
-                await using var ____ = cryptoStream.ConfigureAwait(false);
-                await cryptoStream.CopyToAsync(outputStream, cancellationToken).ConfigureAwait(false);
-
-                if (dispose)
+                if (!dispose)
                 {
-                    outputStream.Close();
-                    await outputStream.DisposeAsync().ConfigureAwait(false);
+                    continue;
                 }
+
+                outputStream.Close();
+                await outputStream.DisposeAsync().ConfigureAwait(false);
             }
         }
 
@@ -130,8 +126,7 @@ namespace NSeal
 
         private byte[] DecryptBytesWithPrivateKey(byte[] data, RSAEncryptionPadding? padding = null)
         {
-            var result = _privateKey.Decrypt(data, padding ?? RSAEncryptionPadding.Pkcs1);
-            return result;
+            return _privateKey.Decrypt(data, padding ?? RSAEncryptionPadding.OaepSHA256);
         }
 
         ///<inheritdoc />

@@ -1,14 +1,15 @@
+using System.IO.Compression;
+using System.Linq;
+
 namespace NSeal.Tests
 {
     using System.IO;
-    using System.Linq;
     using System.Security.Cryptography;
     using System.Security.Cryptography.X509Certificates;
     using System.Text;
     using System.Threading.Tasks;
     using Newtonsoft.Json;
     using PemUtils;
-    using SharpCompress.Archives.Zip;
     using Xunit;
 
     public sealed class PfxEncryptionTests
@@ -19,7 +20,7 @@ namespace NSeal.Tests
 
         public PfxEncryptionTests()
         {
-            var cert = new X509Certificate2("testcert.pfx", "test", X509KeyStorageFlags.Exportable);
+            var cert = X509CertificateLoader.LoadPkcs12FromFile("testcert.pfx", "test", X509KeyStorageFlags.Exportable);
             using var file = File.OpenRead("test.pem");
 
             using var reader = new PemReader(file);
@@ -50,10 +51,10 @@ namespace NSeal.Tests
         {
             var output = await CreatePackage();
             await using var _ = output.ConfigureAwait(false);
-            var outputArchive = ZipArchive.Open(output);
+            var outputArchive = new ZipArchive(output, ZipArchiveMode.Read);
 
-            var entry = outputArchive.Entries.First(x => x.Key == "metadata.json");
-            var entryStream = entry.OpenEntryStream();
+            var entry = outputArchive.Entries.First(x => x.Name == "metadata.json");
+            var entryStream = entry.Open();
             await using var __ = entryStream.ConfigureAwait(false);
             using var streamReader = new StreamReader(entryStream);
             var json = await streamReader.ReadToEndAsync();
@@ -70,7 +71,7 @@ namespace NSeal.Tests
                 var content = new EncryptionContent(
                     "item.txt",
                     new MemoryStream(Encoding.UTF8.GetBytes(HelloWorld)));
-                await _cryptoStreamer.Encrypt(new[] { content }, output).ConfigureAwait(false);
+                await _cryptoStreamer.Encrypt([content], output).ConfigureAwait(false);
             }
 
             return File.OpenRead("output.zip");

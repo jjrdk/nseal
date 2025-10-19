@@ -4,22 +4,21 @@
 
     internal sealed class Cryptography
     {
-        public string Algorithm { get; set; } = string.Empty;
+        public string Algorithm { get; init; } = string.Empty;
 
-        public int BlockSize { get; set; }
+        public int BlockSize { get; init; }
 
-        public int KeySize { get; set; }
+        public int KeySize { get; init; }
 
-        public CipherMode CipherMode { get; set; }
+        public CipherMode CipherMode { get; init; }
 
-        public PaddingMode Padding { get; set; }
+        public PaddingMode Padding { get; init; }
 
-        public string EncryptionKey { get; set; } = string.Empty;
+        public string EncryptionKey { get; init; } = string.Empty;
 
-        public string InitVector { get; set; } = string.Empty;
+        public string InitVector { get; init; } = string.Empty;
 
-        public string AuthKey { get; set; } = string.Empty;
-
-        public string AuthCode { get; set; } = string.Empty;
+        public string AuthKey { get; init; } = string.Empty;
+        public string AuthCode { get; init; } = string.Empty;
     }
 }

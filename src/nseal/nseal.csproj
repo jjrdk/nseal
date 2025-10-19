@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFrameworks>net6.0;net8.0</TargetFrameworks>
+        <TargetFramework>net9.0</TargetFramework>
         <langVersion>latest</langVersion>
         <RootNamespace>NSeal</RootNamespace>
         <AssemblyName>nseal</AssemblyName>
@@ -9,11 +9,11 @@
         <Description>Content encryption library</Description>
         <PackageDescription>$(Description)</PackageDescription>
         <Title>NSeal</Title>
-        <Version>1.6.1</Version>
+        <Version>1.7.0</Version>
         <Authors>Jacob Reimers</Authors>
         <Company>Reimers.dk</Company>
         <Product>NSeal</Product>
-        <Copyright>Reimers.dk © 2020-2023</Copyright>
+        <Copyright>Reimers.dk © 2020-2025</Copyright>
         <PackageTags>Encryption PEM Crypto PFX RFC 2898</PackageTags>
         <PackageProjectUrl>https://github.com/jjrdk/nseal</PackageProjectUrl>
         <RepositoryUrl>https://github.com/jjrdk/nseal</RepositoryUrl>
@@ -25,8 +25,4 @@
         <IsTrimmable>true</IsTrimmable>
         <IsAotCompatible>true</IsAotCompatible>
     </PropertyGroup>
-
-    <ItemGroup>
-        <PackageReference Include="sharpcompress" Version="0.37.2" />
-    </ItemGroup>
 </Project>

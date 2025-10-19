@@ -4,10 +4,10 @@
 
     internal sealed class Bundle
     {
-        public DateTimeOffset AssemblyTime { get; set; } = DateTimeOffset.UtcNow;
+        public DateTimeOffset AssemblyTime { get; init; } = DateTimeOffset.UtcNow;
 
-        public string ContentLink { get; set; } = string.Empty;
+        public string ContentLink { get; init; } = string.Empty;
 
-        public Cryptography Cryptography { get; set; } = new();
+        public Cryptography Cryptography { get; init; } = new();
     }
 }
